@@ -1,0 +1,310 @@
+%\documentclass{article}
+\documentclass[12pt,draftcls,onecolumn]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{color}
+
+\newcommand{\Fp}{\mathbb{Z}_p}
+\newcommand{\sk}{\texttt{sk}}
+\newcommand{\pk}{\texttt{pk}}
+\newcommand{\id}{\texttt{id}}
+\newcommand{\seed}{\texttt{seed}}
+\newcommand{\ind}{\texttt{index}}
+\newcommand{\out}{\texttt{output}}
+\newcommand{\cmt}{\texttt{commit}}
+
+\newcommand{\Alloc}{\textsc{Alloc}}
+\newcommand{\mask}{\textsc{mask}}
+
+\title{Subspace Consensus v2}
+\author{Chen Feng with Subspace R\&D Team}
+%\date{December 4 2022}
+
+\begin{document}
+
+\maketitle
+
+
+\section{Overview of Building Blocks}
+
+In this section, we review several building blocks for Subspace Consensus v2. 
+Our main objective is twofold: improving {\bf user experience} and enhancing {\bf security level}.
+In particular, we would like to optimize the following metrics (related to user experience) as much as possible
+\begin{itemize}
+    \item initialization (or setup) time: a few hours to days (depending on the disk space)
+    \item proof-generation time: less than one second
+    \item proof size: less than 500 KiB
+    \item verification time: much less than one second
+\end{itemize}
+At the same time, we aim to achieve the highest level of consensus security among existing Proof-of-Storage protocols. 
+%We aim to achieve the following objectives
+
+\subsection{Creating Storage Coins}
+
+We divide a file $F$ into $n$ pieces $\{ d_0, d_1, \ldots, d_{n-1}\}$, each of equal size. 
+Without loss of generality, we view each piece as a row vector of length $\ell$ over $\Fp$  (i.e., $d_i \in \Fp^\ell$).
+Then, $F$ can be viewed as a matrix of size $n \times \ell$ over $\Fp$.
+Alternatively, each piece $d_i$ can be viewed as a polynomial $f_i(x)$ over $\Fp$ of degree at most $\ell - 1$. 
+Then, $F$ can be viewed as a collection of $n$ polynomials $\{ f_i(x) \}_{i = 0}^{n-1}$. 
+
+We assume that each farmer creates a farmer ID $\id$ uniformly at random over some domain. For example, $\id$ can be a (cryptographic) hash output of a farmer's public key $\pk$ (i.e., $\id = H(\pk)$).
+We also assume that each farmer selects $m$ pieces (out of $n$ pieces) in a random yet verifiable way based on its farmer ID.
+We denote these $m$ pieces (or equivalently, polynomials) by $\{g_0^{\id}(x), \ldots, g_{m-1}^{\id}(x) \}$.
+For example, each $g_i^{\id}(x)$ can be selected as $f_{(\id + i)\% n}(x)$, where $\% n$ is the mod $n$ operation\footnote{By abuse of notation, we convert $\id$ (from its domain) into an integer here.}.
+As another example\footnote{This example corresponds to a standard coupon collector's problem. In order to make sure that every piece is selected by some farmer, we need a total of $O\left( \frac{n \ln n}{m} \right)$ farmers.}, each $g_i^{\id}(x)$ can be selected as $f_{H(\id, i)\% n}(x)$.
+
+We are now ready to explain how a farmer creates storage coins. Let
+\[
+F^{\id}(x) = \begin{bmatrix} g_0^{\id}(x)\\ g_1^{\id}(x)\\  \vdots \\ g_{m-1}^{\id}(x) \end{bmatrix}
+\]
+be a column vector of $m$ polynomials. 
+Then, we can evaluate $F^{\id}(x)$ at the following $\ell$ points: $\id$, $\id + 1$, $\ldots$, $\id + \ell - 1$\footnote{Again, by abuse of notation, we convert $\id$ into an element in $\Fp$.}.
+Each evaluation $F^{\id}(\id + j)$ is a column vector of length $m$ over $\Fp$. We  call it a {\bf storage coin}
+associated with $\id$ at point $\id + j$.
+For the purpose of efficiency, a farmer can evaluate $\ell$ points simultaneously for every polynomial $g_i^{\id}(x)$
+by using some fast polynomial-evaluation algorithms with $O(\ell \log^2(\ell))$ complexity.
+
+
+Why is a storage coin useful? If we collect all $\ell$ storage coins associated with $\id$, we can recover $F^{\id}(x)$ through polynomial interpolation.
+In particular, if we collect all $\ell$ evaluation points for some $g_i^{\id}(x)$, we can recover $g_i^{\id}(x)$ through polynomial interpolation.
+(There are some fast algorithms for polynomial interpolation with $O(\ell \log^2(\ell))$ complexity.)
+In other words, storage coins allow us to recover some pieces of the file $F$ efficiently. Hence, they represent some {\bf useful storage} for $F$.
+
+How can a farmer prove that a storage coin $F^{\id}(\id + j)$ is created correctly? This is a standard polynomial commitment problem. For example, we can use the
+KZG commitment scheme. Let $A_i$ be the KZG commitment of $f_i(x)$ for $i \in \{0, 1, \ldots, n-1\}$. 
+We consider the following two cases.
+\begin{enumerate}
+    \item The verifier knows $\{ A_i \}_{i = 0}^{n - 1}$. In this case, the farmer just needs to create a KZG proof for the polynomial evaluation $g_i^{\id}(x)$ at point $\id + j$.
+If $g_i^{\id}(x)$ is selected as $f_{(\id + i)\% n}(x)$, the verifier can check the KZG proof by using $A_{(\id + i)\% n}$. 
+    \item The verifier doesn't know any $A_i$. In this case, we can create a KZG commitment\footnote{Since $A_i$ is not an element in $\Fp$, we cannot apply KZG directly. Instead, we need to hash $A_i$ so that $H(A_i) \in \Fp$.} $T$ for $\{ A_i \}_{i = 0}^{n - 1}$ and then give $T$ to the verifier.  The farmer needs to provide two KZG proofs: one for $g_i^{\id}(x)$ and the other for $A_{(\id + i)\% n}$.
+\end{enumerate}
+
+
+\subsection{Masking Storage Coins}
+
+We propose to use a memory-hard function to ``mask" storage coins. The function $\mask(\cdot)$ should have the following three properties
+
+\begin{enumerate}
+    \item It has a tunable parameter $k$ to adjust the memory requirement. 
+    \item It has two inputs $\seed$ and $\ind$, where $\seed$ determines the memory content (e.g., some function tables)
+    and $\ind \in \{0, 1, \ldots, 2^k - 1 \}$ specifies in-memory computation.
+    \item It has a single output (of size depending on $k$) that can be verified with a small amount of memory and time.
+\end{enumerate}
+
+
+%For example, $\seed$ determines some computation tables 
+Note that $\mask(\seed, \ind; k)$ and $\mask(\seed, \ind + 1; k)$ share the same memory content, but $\mask(\seed, \ind; k)$
+and $\mask(\seed + 1, \ind; k)$ don't. 
+
+Next, we explain how to mask a storage coin
+\[
+F^{\id}(\id + j) = \begin{bmatrix} g_0^{\id}(\id + j)\\ g_1^{\id}(\id + j)\\  \vdots \\ g_{m-1}^{\id}(\id + j) \end{bmatrix}.
+\]
+We denote by $\cmt\left(g_i^{\id}(x)\right)$ the KZG commitment of $g_i^{\id}(x)$.
+For each $g_i^{\id}(\id + j)$, we set
+\[
+\seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right) \mbox{ and } \ind = (\id + j) \mbox{ mod } 2^k.
+\]
+Then, we compute $g_i^{\id}(\id + j) \oplus H\left( \mask(\seed, \ind; k) \right)$ as a masked version of $g_i^{\id}(\id + j)$, denoted by $\tilde{g}_i^{\id}(\id + j)$.
+Applying this procedure to all $\{ g_i^{\id}(\id + j) \}_{i = 0}^{m - 1}$, we obtain a {\bf masked storage coin}.
+For efficient use of memory, a farmer can mask $\ell$ points for some polynomial $g_i^{\id}(x)$ (in order to reuse the memory content) and then move to another polynomial, say $g_{i+1}^{\id}(x)$.
+
+\subsection{Creating Random Challenges}
+
+We start with a high-level overview. At each time slot (say, one second), every farmer observes some global randomness (also referred to as the global challenge). 
+Based on this global challenge, each farmer determines exactly one masked storage coin (out of $\ell$ masked storage coins) to scan. Since a storage coin contains $m$ elements in $\Fp$, this gives a farmer $m$ ``tickets'' to win the lottery. A ticket is called a winning ticket if it is close enough to the global challenge in terms of the Hamming distance.
+
+Let $\mathcal{C}_t$ be the global challenge at time slot $t$. Each farmer computes $H(\mathcal{C}_t, \id)$ mod $\ell$ in order to decide which storage coin to scan.
+For example, if 
+\[
+H(\mathcal{C}_t, \id) \mbox{ mod } \ell = j,
+\]
+then the farmer will scan a masked version of $F^{\id}(\id + j)$, hoping to find an element that is close enough to $\mathcal{C}_t$ in terms of the Hamming distance. 
+Alternatively, if $\mathcal{C}_t$ and $\id$ share the same domain, each farmer can compute $\mathcal{C}_t \oplus \id$ mod $\ell$ to decide which storage coin to scan, since $\oplus$ operation is easier than $H(\cdot)$ operation. 
+
+In the above construction, anyone in the system can figure out whether a particular farmer has a winning ticket, because all the operations depend on the farmer's public key $\pk$ (through $\id$) but not on the secret key $\sk$.  
+There is another way of creating random challenges that protect this privacy. 
+Each farmer creates a {\bf local challenge} by signing the global challenge $\mathcal{C}_t$ with its secret key $\sk$. Based on its local challenge, each farmer determines exactly one storage coin (in the same way as before) to find a winning ticket that is close enough to its local challenge. A farmer can reveal its local challenge only after a winning ticket is found.
+
+\subsection{Putting Everything Together}
+
+Recall that the file $F$ consists of $n$ pieces $\{d_i\}_{i = 0}^{n-1}$, which can be viewed as $n$ polynomials $\{ f_i(x) \}_{i = 0}^{n-1}$. Recall that
+$A_i$ is the KZG commitment of $f_i(x)$ and $T$ is the KZG commitment of $(H(A_0), \ldots, H(A_{n-1}))$. We assume that $T$ is public information.
+Let $\pi_i$ be the KZG proof for $H(A_i)$. With $\pi_i$, anyone in the system can verify whether $A_i$ is consistent with the public information $T$.
+
+Each farmer generates a key pair $(\sk, \pk)$ and derives its farmer ID $\id$ (e.g., $\id = H(\pk)$).
+With a given $\id$, the farmer selects $m$ polynomials $\{g_i^{\id}(x) \}_{i = 0}^{m - 1}$ and retrieves their KZG commitments $\{\cmt\left(g_i^{\id}(x) \right \}_{i = 0}^{m - 1}$
+together with the proofs with respect to $T$. Then, the farmer creates $\ell$ storage coins 
+$\{ F^{\id}(\id + j) \}_{j = 0}^{\ell - 1}$ and generates their masked versions by using the function $\mask(\cdot)$ as described before.
+Finally, the farmer stores $\ell$ masked storage coins as well as some metadata (i.e., $m$ commitments $\{\cmt\left(g_i^{\id}(x) \right \}_{i = 0}^{m - 1}$ together with their proofs).
+This process is often called {\bf plotting} in the literature.
+
+Recall that a global challenge $\mathcal{C}_t$ is generated at time slot $t$, based on which each farmer collects $m$ lottery tickets from one masked storage coin. If a farmer finds a winning ticket, it has to prove the following
+\begin{itemize}
+    \item the winning ticket (say, $\tilde{g}_i^{\id}(\id + j)$) is indeed close enough to $\mathcal{C}_t$
+    \item the unmasked element ${g}_i^{\id}(\id + j)$ is correct
+\end{itemize}
+This process is called {\bf auditing} in the literature. 
+
+
+
+% \subsection{Advantages of Our Construction}
+
+% Here, we summarize several advantages of our proposed construction before conducting a formal analysis.
+% \begin{enumerate}
+%     \item The use of storage coins enlarges the design space. In PoR, a file is the smallest unit. In the ECP paper, a RS coded piece is the smallest unit. In our construction, a polynomial coded piece is the smallest unit.
+%     \item The enlarged design space makes it easier for us to choose good parameters.
+%     \item The usefulness of storage coins can be verified through standard KZG, which implies low communication and fast verification.
+%     \item Unlike proof-of-replication, farmers have more incentives to store encodings $\{ R_j(\id) \}_{j = 1}^L$ because these encodings are lottery tickets (which are hard to compute on-the-fly).
+%     \item Once a farmer has one storage coin, it can participate in the lottery.
+%     \item Storage coins support a dynamic setting.
+%     \item The size of a storage coin is relatively small, making it easier to apply slow encoding. I suspect that even the second solution described above might be sufficient.
+% \end{enumerate}
+
+
+\section{Extensions}
+
+Our basic construction relies on an ``ideal'' function $\mask(\cdot)$ that has three properties. The first two properties are easy to achieve, but not the third one. Indeed, we don't have a concrete example of $\mask(\cdot)$ at the time of writing. Instead, we have a weaker version of $\mask(\cdot)$ in which the third property is relaxed. In this version, $\seed$ and $k$ determine a random function $h(\cdot)$ that requires a significant amount 
+of space to invert, and the output of $\mask(\cdot)$ is a pre-image of $\ind$ under $h$. Since the pre-image (of $\ind$ under $h$) can be empty or a set with multiple elements, the output of $\mask(\cdot)$ is not always a single value. We would like to show that this is not an issue.
+To this end, we consider three possible examples of $\mask(\cdot)$.
+
+{\bf Example 1:} $h(\cdot)$ is a random function with its domain and co-domain being the set
+\[
+[2^k] \triangleq \{ 0, 1, \ldots, 2^k - 1  \}.
+\]
+For this example, we have the following observations.
+\begin{itemize}
+    \item $\ind \in [2^k]$
+    \item Around $1/e$ fraction of $\ind$ has no pre-images for large $k$
+    \item The maximum number of pre-images is upper bounded by $\ln(2^k)/\ln\left( \ln(2^k) \right)$ with high probability
+\end{itemize}
+
+In fact, it is a standard balls-and-bins problem. The probability of an ``error event'' can be approximately bounded by $\exp\left(- 2^k D_{KL}(1 - \ell/2^k, 1/e) \right)$. To see this, on the one hand, the fraction of empty bins is approximately $1/e$ for large $k$, and on the other hand, the fraction of non-empty bins should be no smaller than $\ell/2^{k}$ in order to ``mask'' $\ell$ polynomial evaluations.
+%(To do: cite more results here.)
+
+A concern here: the variance creates grinding opportunities (because the number of tickets is no longer fixed). Luckily, we can show that the variance is indeed small.
+
+{\bf Example 2:} $h(\cdot)$ is constructed via a random function $g : [2^k] \times [2^k] \to [2^k]$
+and a random permutation $f: [2^k] \to [2^k]$ by following the Beyond-Hellman paper. Specifically, 
+$h(\cdot)$ is defined as $h(x) = g(x, x')$, where $f(x) = \pi( f(x') )$ with $\pi$ being any involution
+without a fixed point (e.g., flipping all the bits). In this example, since a pair $(x, x')$ with $f(x) = \pi( f(x') )$ can be viewed as a ball, our analysis for Example~1 still applies here. 
+
+{\bf Example 3:} $h(\cdot)$ is constructed via Chia PoS tables. In this example, an output is of the form $(x_1, x_2, \ldots, x_{64})$. Assume that all seven functions $f_1(x), \ldots, f_7(x)$  are random functions.
+Then, for any \emph{weakly distinct} tuple $(x_1, x_2, \ldots, x_{64})$, the probability it passes the challenge is $2^{-64k}$.
+Note that in Example~2, for any \emph{weakly distinct} tuple $(x_1, x_2)$, the probability it passes the challenge is approximately $2^{-2k}$. Therefore, our analysis for Example~2 is a good approximation.
+
+{\bf Attack 1:} If $\mask(\seed, \ind; k)$ returns multiple outputs, an attacker can produce multiple tickets instead of one.
+
+\begin{itemize}
+    \item Mitigation Method 1: If the verifier can figure out which output is the first, then this issue can be resolved.
+    \item Mitigation Method 2: We allow the farmers to produce multiple tickets from multiple outputs. This introduces some randomness, which can be bounded by using the analysis above.
+\end{itemize}
+
+{\bf Attack 2:} The attacker stores the Chia PoS tables on disk instead of the masked storage coins.
+
+\begin{itemize}
+    \item Mitigation Method 1: We can choose $k$ so that Chia PoS tables are sufficiently larger than the corresponding masked storage coins.
+    \item Mitigation Method 2: We estimate the amount of additional disk look-ups and then use an economic security argument.
+\end{itemize}
+
+{\bf Attack 3:} The attacker stores the Chia PoS tables on memory.
+
+\begin{itemize}
+    \item We show that the memory storage cost is larger than the disk storage cost.
+\end{itemize}
+
+{\bf Note:} Both Attack 2 and Attack 3 can be well mitigated by using a large $k$. However, we have some practical upper bound on $k$. So, we need a {\bf tight analysis} to show that a relatively small $k$ is still OK.
+
+{\bf Attack 4:} The attacker exploits the case of expiring pieces. Since this case is not considered in our current model and analysis, there might be some potential attacks here.
+
+%{\bf Attack 5:} On DSN load balancing.
+
+
+\section{Economic Security Analysis}
+
+\subsection{System model}
+
+{\bf Outline:} We can use the economic security model (proposed in the hourglass paper) to reason about economic security, which is different from consensus security (about safety and liveness).
+
+\subsection{Analysis}
+
+{\bf Intuition:} First of all, we consider three extreme cases.
+\begin{itemize}
+    \item If an attacker generates the Chia PoS tables on the fly, then the memory IO is lower bounded by the size of the tables.
+    \item If an attacker stores the Chia PoS tables on memory, then the memory storage cost is higher than the disk storage cost.
+    \item If an attacker stores the Chia PoS tables on disk, then we can make the size of tables larger than the masked storage coins.
+\end{itemize}
+
+Next, for Hellman's attacks, we should lower bound their memory IO cost and memory storage cost.
+Also, we need to consider perhaps more general attacks because the goal here is to minimize the cost instead of some space-time tradeoff.
+
+\section{Consensus Security Analysis}
+
+Our key inspirations are the following.
+
+\begin{itemize}
+    \item When considering longest-chain protocols, PoS is less secure than PoW as it presents many additional vulnerabilities. 
+    \item The best we can show is that Proof-of-Archival-Storage (PoAS) stands in the middle, as (useful) storage is not virtual, but is reusable.
+\end{itemize}
+
+\subsection{System model}
+
+%On Explicit Constructions of Extremely Depth Robust Graphs
+
+%ZigZag horizontal DRG + vertical DRG
+
+
+%Temporary Block Withholding Attacks on Filecoin's Expected Consensus
+
+
+
+Our setup closely follows the modeling-resources paper.
+
+% Modeling Resources in Permissionless Longest-chain Total-order Broadcast
+
+{\bf Time.} The protocol proceeds in time steps $t \in \mathbb{N}$ starting from $0$.
+
+{\bf Processes.} Consider a set of processes $\mathcal{P} = \{ p_1, p_2, \ldots \}$. Since processors can join the system at any time,
+we denote by $\mathcal{P}_t$ the set of all processes that have joined before the time step $t$. Clearly, $\mathcal{P}_t \subseteq \mathcal{P}_{t'}$ 
+for all $t \le t'$.
+
+{\bf Network delay.} We denote by $\Delta \in \mathbb{N}$ with $\Delta \ge 1$ the maximum network delay.
+
+{\bf Blocks.} A block is $B = (h, \overline{tx}, \pi, \sigma)$, where $h$ is a hash value (of its parent block), $\overline{tx}$ is a list of transactions,
+$\pi$ is a resource commitment proof, and $\sigma$ is a signature on $(h, \overline{tx}, \pi)$.
+
+{\bf Blockchain.} A blockchain $\mathcal{C} = [B_0, B_1, \ldots]$ is a chain of blocks with respect to the genesis block $B_0$.
+
+Next, we introduce key definitions to model resources.
+
+{\bf Resource Budget.} A resource budget $r$ is a value in $\mathbb{N}$. At any given time, each process $p_i$ has a resource budget $r_i$.
+Abstractly, there exists a function $\Alloc: \mathcal{P} \times \mathbb{N} \to \mathbb{N}$ that takes as input a process $p_i$
+and a time step $t$, and outputs the resource budget of $p_i$ at time step $t$. Concretely, $\Alloc(p_i, t)$ tells us the number of storage coins
+owned by process $p_i$ at time step $t$.
+
+{\bf Resource Allocator.} This abstraction will allow us to reason about different resources. We need to develop some intuitions first. 
+A process triggers a commit event to pledge its resources to a system, and it can be assigned a resource commitment $\pi$ which allows it to extend the blockchain. Since $\pi$ will be included on-chain, it must be publicly verifiable. Other processes can trigger a validate event to verify $\pi$.
+
+\begin{itemize}
+    \item $\textsc{RA-commit}(p_i, r)$: At time step $t$, every process $p_i$ may request a resource commitment $\pi$ from the resource allocator
+    by invoking \textsc{RA-commit} on its resource budget $0 \le r \le \Alloc(p_i, t)$. That is, $p_i$ doesn't \textsc{RA-commit} more resources than it possesses. At the end of time step $t$, the resource allocator either assigns a resource commitment $\pi$ and a resource budget $r$ or assigns an empty value.
+
+    \item $\textsc{RA-validate}(p_j, \pi)$: Every process $p_j$ may validate a resource commitment $\pi$.
+\end{itemize}
+
+Resources can be classified into various types. Abstractly, these types can be described as the interactions between processes and the resource allocator.
+
+{\bf Virtual.} A resource is virtual when the resource allocator determines the resource budget of all processes from a given blockchain state.
+
+{\bf External.} A resource is external when a process must allocate the resource externally with a budget $r \ge 0$ in order to invoke $\textsc{RA-commit}()$.
+For an external resource, invoking $\textsc{RA-commit}()$ is equivalent to giving resource allocator access to the external resource with the budget $r$.
+
+{\bf Burnable.} A resource is burnable when a process can trigger multiple $\textsc{RA-commit}()$ at a time step $t$ subject to the budget $r$ (i.e., the sum of its committed budget is no greater than $r$).
+
+{\bf Reusable.} A resource is reusable when a process $p_i$ can use the same budget $r \le \Alloc(p_i, t)$ to trigger infinitely many $\textsc{RA-commit}(p_i, r)$ at each time step $t$.
+
+
+\subsection{Analysis}
+
+\end{document}
