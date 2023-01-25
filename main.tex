@@ -34,7 +34,7 @@ In particular, we would like to optimize the following user-experience metrics a
     \item initialization (or setup) time: a few hours to days (depending on the disk space)
     \item proof-generation time: less than one second
     \item proof size: less than 500 Bytes
-    \item verification time: much less than one second
+    \item verification time: much less than one second, ideally in milliseconds
 \end{itemize}
 At the same time, we aim to achieve the highest level of {\bf consensus security} among existing Proof-of-Storage protocols. 
 %We aim to achieve the following objectives
@@ -243,9 +243,11 @@ Note that in Example~2, for any \emph{weakly distinct} tuple $(x_1, x_2)$, the p
 
 \subsection{System model}
 
-{\bf Outline:} We can use the economic security model (proposed in the hourglass paper) to reason about economic security, which is different from consensus security (about safety and liveness).
+{\bf Outline:} We can use the economic security model (proposed in Ling Ren's PhD thesis) to reason about economic security, which is different from consensus security (about safety and liveness).
 
 \subsection{Analysis}
+
+Following Ling Ren's PhD thesis, we introduce a hardware architecture model and an energy cost model.
 
 {\bf Intuition:} First of all, we consider three extreme cases.
 \begin{itemize}
