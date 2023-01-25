@@ -39,6 +39,8 @@ In particular, we would like to optimize the following user-experience metrics a
 At the same time, we aim to achieve the highest level of {\bf consensus security} among existing Proof-of-Storage protocols. 
 %We aim to achieve the following objectives
 
+The (relative) small proof size prevents us from using pebbling-based constructions (such as depth robust graphs), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size), erasure coding, and Chia PoS tables (as a memory-bound function), to address our design challenge.  
+
 \subsection{Creating Storage Coins}
 
 We divide a file $F$ into $n$ pieces $\{ d_0, d_1, \ldots, d_{n-1}\}$, each of equal size. 
@@ -187,23 +189,24 @@ In order to use $h(\cdot)$, we consider three cases for some $\ind = (\id + j) \
 Then, for each storage coin $F^{\id}(\id + j)$ at point $\id + j$, we only store its masked elements (and discard its unmasked elements).
 
 Previously, we need a total of $\ell$ storage coins (in order to recover the original pieces). How many storage coins do we need now?
-Clearly, this number $L$ should be between $\ell$ and $2^k$ (i.e., $\ell < L < 2^k$).
+Clearly, this number $L$ should be between $\ell$ and $2^k$ (i.e., $\ell < L \le 2^k$).
 In fact, it is a standard balls-and-bins problem. 
 Suppose that we have $2^k$ balls and $2^k$ bins with each ball placed into a bin uniformly at random and independent of each other.
 Then, the fraction of empty bins is approximately $\frac{1}{e}$ for large $2^k$.
 In other words, the fraction of non-empty bins is approximately $1 - \frac{1}{e}$.
 This implies that $\frac{\ell}{L} \ge 1 - \frac{1}{e}$ if we would like to have at least $\ell$ non-empty bins out of the first $L$ bins. 
-Moreover, the probability of an ``error event'' (of having fewer than $\ell$ non-empty bins out of the first $L$ bins) can be approximately bounded by $\exp\left(- 2^k D_{KL}(1 - \ell/L, 1/e) \right)$. 
+In fact, the probability of an ``error event'' (of having fewer than $\ell$ non-empty bins out of the first $L$ bins) can be approximately bounded by $\exp\left(- 2^k D_{KL}(1 - \ell/L, 1/e) \right)$. The larger $L$ is, the larger the term $D_{KL}(1 - \ell/L, 1/e)$ is, and the smaller the error probability.
+This can be used as a guideline for choosing $L$.
 
 %To see this, on the one hand, the fraction of empty bins is approximately $1/e$ for large $k$, and on the other hand, the fraction of non-empty bins should be no smaller than $\ell/2^{k}$ in order to ``mask'' $\ell$ polynomial evaluations.
 %(To do: cite more results here.)
 
-A concern here: the variance creates grinding opportunities (because the number of tickets is no longer fixed). Luckily, we can show that the variance is indeed small.
+%A concern here: the variance creates grinding opportunities (because the number of tickets is no longer fixed). Luckily, we can show that the variance is indeed small.
 
 {\bf Example 2:} $h(\cdot)$ is constructed via a random function $g : [2^k] \times [2^k] \to [2^k]$
 and a random permutation $f: [2^k] \to [2^k]$ by following the Beyond-Hellman paper. Specifically, 
 $h(\cdot)$ is defined as $h(x) = g(x, x')$, where $f(x) = \pi( f(x') )$ with $\pi$ being any involution
-without a fixed point (e.g., flipping all the bits). In this example, since a pair $(x, x')$ with $f(x) = \pi( f(x') )$ can be viewed as a ball, our analysis for Example~1 still applies here. 
+without a fixed point (e.g., flipping all the bits). In this example, since any pair $(x, x')$ with $f(x) = \pi( f(x') )$ can be viewed as a ball, our analysis for Example~1 still applies here. Also, a pre-image of $h(\cdot)$ is of the form $(x, x')$ rather than $x$ only, because otherwise the verifier has to find $x'$.
 
 {\bf Example 3:} $h(\cdot)$ is constructed via Chia PoS tables. In this example, an output is of the form $(x_1, x_2, \ldots, x_{64})$. Assume that all seven functions $f_1(x), \ldots, f_7(x)$  are random functions.
 Then, for any \emph{weakly distinct} tuple $(x_1, x_2, \ldots, x_{64})$, the probability it passes the challenge is $2^{-64k}$.
