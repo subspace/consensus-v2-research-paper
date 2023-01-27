@@ -16,7 +16,7 @@
 \newcommand{\Alloc}{\textsc{Alloc}}
 \newcommand{\mask}{\textsc{mask}}
 
-\title{Subspace Consensus v2}
+\title{Dilithium: Subspace Consensus v2}
 \author{Chen Feng with Subspace R\&D Team}
 %\date{December 4 2022}
 
@@ -27,7 +27,7 @@
 
 \section{Overview of Building Blocks}
 
-In this section, we review several building blocks for Subspace Consensus v2. 
+In this section, we review several building blocks for Subspace Consensus v2 called {\bf Dilithium}. 
 Our main objective is twofold: improving {\bf user experience} and enhancing {\bf security level}.
 In particular, we would like to optimize the following user-experience metrics as much as possible
 \begin{itemize}
@@ -107,7 +107,9 @@ For each $g_i^{\id}(\id + j)$, we set
 \seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right) \mbox{ and } \ind = (\id + j) \mbox{ mod } 2^k.
 \]
 Then, we compute $g_i^{\id}(\id + j) \oplus H\left( \mask(\seed, \ind; k) \right)$ as a masked version of $g_i^{\id}(\id + j)$, denoted by $\tilde{g}_i^{\id}(\id + j)$.
-Applying this procedure to all $\{ g_i^{\id}(\id + j) \}_{i = 0}^{m - 1}$, we obtain a {\bf masked storage coin}.
+Applying this procedure to all $\{ g_i^{\id}(\id + j) \}_{i = 0}^{m - 1}$, we obtain a {\bf masked storage coin}\footnote{Alternatively, 
+we can set $\ind = j$ (where $j \in [2^k]$) and use $H\left( \mask(\seed, \ind; k) \right)$ to mask $g_i^{\id}(j)$ instead of $g_i^{\id}(\id + j)$. That is, the start index can be $0$
+instead of $\id$, and the storage coins associated with $\id$ are at points $0$ to $\ell - 1$.}.
 For efficient use of memory, a farmer can mask $\ell$ points for some polynomial $g_i^{\id}(x)$ (in order to reuse the memory content) and then move to another polynomial, say $g_{i+1}^{\id}(x)$.
 
 \subsection{Creating Random Challenges}
@@ -211,6 +213,9 @@ without a fixed point (e.g., flipping all the bits). In this example, since any 
 {\bf Example 3:} $h(\cdot)$ is constructed via Chia PoS tables. In this example, an output is of the form $(x_1, x_2, \ldots, x_{64})$. Assume that all seven functions $f_1(x), \ldots, f_7(x)$  are random functions.
 Then, for any \emph{weakly distinct} tuple $(x_1, x_2, \ldots, x_{64})$, the probability it passes the challenge is $2^{-64k}$.
 Note that in Example~2, for any \emph{weakly distinct} tuple $(x_1, x_2)$, the probability it passes the challenge is approximately $2^{-2k}$. Therefore, our analysis for Example~2 is a good approximation.
+
+
+We now understand the extensions of our basic construction. Before conducting a formal analysis, let us present several possible attacks and their mitigation methods in order to better understand our construction.
 
 {\bf Attack 1:} If $\mask(\seed, \ind; k)$ returns multiple outputs, an attacker can produce multiple tickets instead of one.
 
