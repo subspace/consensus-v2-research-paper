@@ -65,6 +65,7 @@ Each evaluation $F^{\id}(\id + j)$ is a column vector of length $m$ over $\Fp$. 
 associated with $\id$ at point $\id + j$.
 For the purpose of efficiency, a farmer can evaluate $\ell$ points simultaneously for every polynomial $g_i^{\id}(x)$
 by using some fast polynomial-evaluation algorithms with $\mathcal{O}(\ell \log^2(\ell))$ complexity.
+Alternatively, we can evaluate $F^{\id}(x)$ at another set of $\ell$ points: $\id$, $\id \cdot \omega$, $\ldots$, $\id \cdot \omega^{\ell - 1}$, where $\omega$ is a primitive root of unity over $\Fp$ with $\omega^\ell = 1$ or $\omega^{2 \ell} = 1$.
 
 
 Why is a storage coin useful? If we collect all $\ell$ storage coins associated with $\id$, we can recover $F^{\id}(x)$ through polynomial interpolation.
@@ -104,13 +105,13 @@ F^{\id}(\id + j) = \begin{bmatrix} g_0^{\id}(\id + j)\\ g_1^{\id}(\id + j)\\  \v
 We denote by $\cmt\left(g_i^{\id}(x)\right)$ the KZG commitment of $g_i^{\id}(x)$.
 For each $g_i^{\id}(\id + j)$, we set
 \[
-\seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right) \mbox{ and } \ind = (\id + j) \mbox{ mod } 2^k.
+\seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right) \mbox{ and } \ind = j \mbox{ mod } 2^k.
 \]
 Then, we compute $g_i^{\id}(\id + j) \oplus H\left( \mask(\seed, \ind; k) \right)$ as a masked version of $g_i^{\id}(\id + j)$, denoted by $\tilde{g}_i^{\id}(\id + j)$.
-Applying this procedure to all $\{ g_i^{\id}(\id + j) \}_{i = 0}^{m - 1}$, we obtain a {\bf masked storage coin}\footnote{Alternatively, 
-we can set $\ind = j$ (where $j \in [2^k]$) and use $H\left( \mask(\seed, \ind; k) \right)$ to mask $g_i^{\id}(j)$ instead of $g_i^{\id}(\id + j)$. That is, the start index can be $0$
-instead of $\id$, and the storage coins associated with $\id$ are at points $0$ to $\ell - 1$.}.
+Applying this procedure to all $\{ g_i^{\id}(\id + j) \}_{i = 0}^{m - 1}$, we obtain a {\bf masked storage coin}.
 For efficient use of memory, a farmer can mask $\ell$ points for some polynomial $g_i^{\id}(x)$ (in order to reuse the memory content) and then move to another polynomial, say $g_{i+1}^{\id}(x)$.
+Alternatively,
+we can use $H\left( \mask(\seed, j; k) \right)$ to mask $g_i^{\id}(\id \cdot \omega^j)$ instead of $g_i^{\id}(\id + j)$, where $\omega$ is a primitive root of unity\footnote{In the C-KZG library, $\omega$ is chosen such that $\omega^{2 \ell} = 1$.}.
 
 \subsection{Creating Random Challenges}
 
