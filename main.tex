@@ -25,7 +25,7 @@
 \maketitle
 
 
-\section{Overview of Building Blocks}
+\section{Building Blocks}
 
 In this section, we review several building blocks for Subspace Consensus v2 called {\bf Dilithium}. 
 Our main objective is twofold: improving {\bf user experience} and enhancing {\bf security level}.
@@ -39,7 +39,7 @@ In particular, we would like to optimize the following user-experience metrics a
 At the same time, we aim to achieve the highest level of {\bf consensus security} among existing Proof-of-Storage protocols. 
 %We aim to achieve the following objectives
 
-The (relative) small proof size prevents us from using pebbling-based constructions (such as depth robust graphs), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size), erasure coding, and Chia PoS tables (as a memory-bound function), to address our design challenge.  
+The (relative) small proof size prevents us from using graph-labeling-based constructions (such as those with depth robust graphs used in Filecoin), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size), erasure coding, and Chia PoS tables (as a memory-bound function), to address our design challenge.  
 
 \subsection{Creating Storage Coins}
 
@@ -103,9 +103,9 @@ Next, we explain how to mask a storage coin
 F^{\id}(\id + j) = \begin{bmatrix} g_0^{\id}(\id + j)\\ g_1^{\id}(\id + j)\\  \vdots \\ g_{m-1}^{\id}(\id + j) \end{bmatrix}.
 \]
 We denote by $\cmt\left(g_i^{\id}(x)\right)$ the KZG commitment of $g_i^{\id}(x)$.
-For each $g_i^{\id}(\id + j)$, we set
+For each $g_i^{\id}(\id + j)$ (where $j \in [2^k]$), we set
 \[
-\seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right) \mbox{ and } \ind = j \mbox{ mod } 2^k.
+\seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right) \mbox{ and } \ind = j.
 \]
 Then, we compute $g_i^{\id}(\id + j) \oplus H\left( \mask(\seed, \ind; k) \right)$ as a masked version of $g_i^{\id}(\id + j)$, denoted by $\tilde{g}_i^{\id}(\id + j)$.
 Applying this procedure to all $\{ g_i^{\id}(\id + j) \}_{i = 0}^{m - 1}$, we obtain a {\bf masked storage coin}.
@@ -245,11 +245,11 @@ We now understand the extensions of our basic construction. Before conducting a 
 %{\bf Attack 5:} On DSN load balancing.
 
 
-\section{Economic Security Analysis}
+\section{Economic Security Analysis (in draft version)}
 
 \subsection{System model}
 
-{\bf Outline:} We can use the economic security model (proposed in Ling Ren's PhD thesis) to reason about economic security, which is different from consensus security (about safety and liveness).
+{\bf Outline:} We can use the economic security model (proposed in Ling Ren's PhD thesis) to reason about economic security, which is different from consensus security (about safety and liveness). In particular, we will focus on the memory IO and Hash computation (modelled as an oracle access). We will model the energy cost as a linear combination of the memory IO and oracle access and then derive a lower bounder for the energy cost. We will then include the setup cost.
 
 \subsection{Analysis}
 
@@ -265,7 +265,7 @@ Following Ling Ren's PhD thesis, we introduce a hardware architecture model and 
 Next, for Hellman's attacks, we should lower bound their memory IO cost and memory storage cost.
 Also, we need to consider perhaps more general attacks because the goal here is to minimize the cost instead of some space-time tradeoff.
 
-\section{Consensus Security Analysis}
+\section{Consensus Security Analysis (in draft version)}
 
 Our key inspirations are the following.
 
