@@ -43,7 +43,7 @@ The (relative) small proof size prevents us from using graph-labeling-based cons
 
 \subsection{Creating Storage Coins}
 
-We divide a file $F$ into $n$ pieces $\{ d_0, d_1, \ldots, d_{n-1}\}$, each of equal size. 
+We divide a file $F$ into $n$ pieces $\{ d_0, d_1, \ldots, d_{n-1}\}$, each of equal size\footnote{We can view $F$ as the blockchain history. In general, $F$ grows over time. Here, we consider the case that $F$ is fixed and defer the general case to our specification.}. 
 Without loss of generality, we view each piece as a row vector of length $\ell$ over $\Fp$  (i.e., $d_i \in \Fp^\ell$)\footnote{Here, we choose $\Fp$ because we would like to apply KZG polynomial commitment later.}.
 Then, $F$ can be viewed as a matrix of size $n \times \ell$ over $\Fp$.
 Alternatively, each piece $d_i$ can be viewed as a polynomial $f_i(x)$ over $\Fp$ of degree at most $\ell - 1$. 
@@ -78,7 +78,7 @@ KZG commitment scheme. Let $A_i$ be the KZG commitment of $f_i(x)$ for $i \in \{
 We consider the following two cases.
 \begin{enumerate}
     \item The verifier knows $\{ A_i \}_{i = 0}^{n - 1}$. In this case, the farmer just needs to create a KZG proof for the polynomial evaluation $g_i^{\id}(x)$ at point $\id + j$, because the verifier can check whether the choice of polynomial $g_i^{\id}(x)$ is correct. For example, if $g_i^{\id}(x)$ is selected as $f_{(\id + i)\% n}(x)$, the verifier can check whether the KZG proof is consistent with $A_{(\id + i)\% n}$. 
-    \item The verifier doesn't know any $A_i$. In this case, we can create a KZG commitment $T$ for $\{ A_i \}_{i = 0}^{n - 1}$ and then give $T$ to the verifier\footnote{Since $A_i$ is not an element in $\Fp$, we cannot apply KZG directly. Instead, we need to hash $A_i$ so that $H(A_i) \in \Fp$.}.  The farmer needs to provide two KZG proofs: one for the polynomial evaluation $g_i^{\id}(x)$ at point $\id + j$ and the other for the correctness of $g_i^{\id}(x)$ (e.g., whether $A_{(\id + i)\% n}$ is consistent with $T$).
+    \item The verifier doesn't know any $A_i$. In this case, we can create a KZG commitment $T$ for $\{ A_i \}_{i = 0}^{n - 1}$ and then give $T$ to the verifier\footnote{Since $A_i$ is not an element in $\Fp$, we cannot apply KZG directly. Instead, we need to hash $A_i$ so that $H(A_i) \in \Fp$.}.  The farmer needs to provide two KZG proofs: one for the polynomial evaluation $g_i^{\id}(x)$ at point $\id + j$ and the other for the correctness of $g_i^{\id}(x)$. (That is, $g_i^{\id}(x)$ is chosen correctly according to our rule. For example, the commitment of $g_i^{\id}(x)$ is indeed $A_{(\id + i)\% n}$, which can be proven by using $T$.)
 \end{enumerate}
 
 
@@ -96,7 +96,7 @@ We propose to use a memory-bound (or memory-bandwidth-hard) function to ``mask" 
 
 %For example, $\seed$ determines some computation tables 
 Note that $\mask(\seed, \ind; k)$ and $\mask(\seed, \ind + 1; k)$ share the same memory content, but $\mask(\seed, \ind; k)$
-and $\mask(\seed + 1, \ind; k)$ don't. 
+and $\mask(\seed + 1, \ind; k)$ don't. For notational simplicity, we use $[2^k]$ to denote the set $\{0, 1, \ldots, 2^k - 1 \}$.
 
 Next, we explain how to mask a storage coin
 \[
@@ -183,13 +183,13 @@ For this example\footnote{Note that the resulting $\mask(\cdot)$ from Example~1 
     \item The maximum number of pre-images is upper bounded by $\ln(2^k)/\ln\left( \ln(2^k) \right)$ with high probability.
 \end{itemize}
 
-In order to use $h(\cdot)$, we consider three cases for some $\ind = (\id + j) \mbox{ mod } 2^k$.
+In order to use $h(\cdot)$, we consider three cases for some $\ind \in [2^k]$.
 \begin{enumerate}
-    \item $\ind$ has a unique pre-image under $h$. In this case, we simply compute $g_i^{\id}(\id + j) \oplus H\left( h^{-1}(\ind) \right)$ as a masked version of $g_i^{\id}(\id + j)$ as we did before.
-    \item $\ind$ has no pre-image under $h$. In this case, we skip $g_i^{\id}(\id + j)$, leaving the element $g_i^{\id}(\id + j)$ unmasked.
-    \item $\ind$ has multiple pre-images under $h$. In this case, we mask $g_i^{\id}(\id + j)$ with one such pre-image.
+    \item $\ind$ has a unique pre-image under $h$. In this case, we simply compute $g_i^{\id}(\id + \ind) \oplus H\left( h^{-1}(\ind) \right)$ as a masked version of $g_i^{\id}(\id + \ind)$ as we did before.
+    \item $\ind$ has no pre-image under $h$. In this case, we skip $g_i^{\id}(\id + \ind)$, leaving the element $g_i^{\id}(\id + \ind)$ unmasked.
+    \item $\ind$ has multiple pre-images under $h$. In this case, we mask $g_i^{\id}(\id + \ind)$ with one such pre-image.
 \end{enumerate}
-Then, for each storage coin $F^{\id}(\id + j)$ at point $\id + j$, we only store its masked elements (and discard its unmasked elements).
+Then, for each storage coin $F^{\id}(\id + \ind)$ at point $\id + \ind$, we only store its masked elements (and discard its unmasked elements).
 
 Previously, we need a total of $\ell$ storage coins (in order to recover the original pieces). How many storage coins do we need now?
 Clearly, this number $L$ should be between $\ell$ and $2^k$ (i.e., $\ell < L \le 2^k$).
