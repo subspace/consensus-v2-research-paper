@@ -247,15 +247,13 @@ We now understand the extensions of our basic construction. Before conducting a 
 
 \section{Economic Security Analysis (in draft version)}
 
-\subsection{System model}
+%\subsection{System model}
 
-{\bf Outline:} We can use the economic security model (proposed in Ling Ren's PhD thesis) to reason about economic security, which is different from consensus security (about safety and liveness). In particular, we will focus on the memory IO and Hash computation (modelled as an oracle access). We will model the energy cost as a linear combination of the memory IO and oracle access and then derive a lower bounder for the energy cost. We will then include the setup cost.
+{\bf Outline:} We can use a hardware architecture model to reason about economic security. In particular, we will focus on the memory IO and Hash computation (modelled as an oracle access). We will model the energy cost as a linear combination of the memory IO and oracle access and then derive a lower bounder for the energy cost. We will then include the setup cost. Similar models have already been used in Ling Ren's PhD thesis and other works.
 
-\subsection{Analysis}
 
-Following Ling Ren's PhD thesis, we introduce a hardware architecture model and an energy cost model.
 
-{\bf Intuition:} First of all, we consider three extreme cases.
+{\bf Intuition:} First of all, we consider three very simple cases.
 \begin{itemize}
     \item If an attacker generates the Chia PoS tables on the fly, then the memory IO is lower bounded by the size of the tables.
     \item If an attacker stores the Chia PoS tables on memory, then the memory storage cost is higher than the disk storage cost.
@@ -263,14 +261,16 @@ Following Ling Ren's PhD thesis, we introduce a hardware architecture model and 
 \end{itemize}
 
 Next, for Hellman's attacks, we should lower bound their memory IO cost and memory storage cost.
-Also, we need to consider perhaps more general attacks because the goal here is to minimize the cost instead of some space-time tradeoff.
+Also, we need to consider more general attacks because the attacking goal here is to minimize the cost instead of the conventional space-time tradeoff.
+
+{\bf Proof Sketch:} To be written.
 
 \section{Consensus Security Analysis (in draft version)}
 
 Our key inspirations are the following.
 
 \begin{itemize}
-    \item When considering longest-chain protocols, PoS is less secure than PoW as it presents many additional vulnerabilities. 
+    \item When considering longest-chain protocols, Proof-of-Stake (PoS) is less secure than PoW as it presents many additional vulnerabilities (such as long-range attacks). 
     \item The best we can show is that Proof-of-Archival-Storage (PoAS) stands in the middle, as (useful) storage is not virtual, but is reusable.
 \end{itemize}
 
@@ -285,7 +285,7 @@ Our key inspirations are the following.
 
 
 
-Our setup closely follows the modeling-resources paper.
+Our setup closely follows a very recent paper called ``Modelling Resources in Permissionless Longest-Chain Total-Order Broadcast'' which provides an excellent abstraction for PoS, PoW, and PoAS.
 
 % Modeling Resources in Permissionless Longest-chain Total-order Broadcast
 
@@ -332,5 +332,14 @@ For an external resource, invoking $\textsc{RA-commit}()$ is equivalent to givin
 
 
 \subsection{Analysis}
+
+{\bf Proof Sketch:} Our proof techniques are largely based on the following three papers
+\begin{itemize}
+    \item ``Everything is a Race and Nakamoto Always Wins,'' by Amir Dembo, Sreeram Kannan, Ertern Nusret Tas, David Tse, Pramod Viswanath, Xuechao Wang, and Ofer Zeitouni, CCS'20
+    \item ``Bitcoin's Latency-Security Analysis Made Simple,'' by Dongning Guo and Ling Ren, AFT'22
+    \item ``Modeling Resources in Permissionless Longest-Chain Total-Order Broadcast,'' by Sarah Azouvi, Christian Cachin, Duc V. Le, and Luca Zanolini, arXiv'22
+\end{itemize}
+
+More details will come soon!
 
 \end{document}
