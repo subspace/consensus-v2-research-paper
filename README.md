@@ -1,5 +1,3 @@
-# consensus-v2
+# consensus-v2-research-paper
 
-Here, we will provide some materials for Subspace consensus v2. They are also available through an overleaf link
-
-https://www.overleaf.com/1382587398mdrcjtwgqcgc
+Here, we will provide a research-style paper to better explain Subspace consensus v2. In particular, we will start from simple mathematical models to abstract as many technical details as possible so that the readers can focus on our core ideas and innovations.
