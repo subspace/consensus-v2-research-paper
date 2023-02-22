@@ -260,10 +260,22 @@ We now understand the extensions of our basic construction. Before conducting a 
     \item If an attacker stores the Chia PoS tables on disk, then we can make the size of tables larger than the masked storage coins.
 \end{itemize}
 
-Next, for Hellman's attacks, we should lower bound their memory IO cost and memory storage cost.
-Also, we need to consider more general attacks because the attacking goal here is to minimize the cost instead of the conventional space-time tradeoff.
+Next, for Hellman's attacks, we can lower bound their memory IO and computational costs.
+Here, we need to consider more general attacks because the attacking goal here is to minimize the total cost.
 
-{\bf Proof Sketch:} To be written.
+{\bf Proof Sketch:} Our proof is based on the following ingredients. 
+
+\begin{itemize}
+    \item Space-time tradeoff lower bound (from the ``Beyond Hellman'' paper): 
+    any adversary who gets $S$ bits of auxiliary information, makes at most $T$
+    oracle queries, and inverts $h(\cdot)$ (defined in Example~2 above) on an
+    $\epsilon$ fraction of outputs must satisfy $S^2 \cdot T \in \Omega(\epsilon^2 N^2)$ (where $N$
+    is the domain size and $N = 2^k$ in our notation).
+    \item Energy cost in the parallel random oracle model (from the ``Bandwidth-Hard Functions'' paper): a formal definition of energy costs is given based on a simple memory-cache model.
+\end{itemize}
+
+Roughly, $S$ bits of auxiliary information can be computed in cache and then transferred to memory (which incurs memory IO with a unit cost $c_b$), and $T$ oracle queries can be charged with a unit cost $c_r$.
+This allows us to evaluate the energy cost for any adversary. Note that this cost depends on $k$, which can be adjusted so that the cost is higher than the energy cost of honest farmers.
 
 \section{Consensus Security Analysis (in draft version)}
 
