@@ -245,7 +245,7 @@ We now understand the extensions of our basic construction. Before conducting a 
 %{\bf Attack 5:} On DSN load balancing.
 
 
-\section{Economic Security Analysis (in draft version)}
+\section{Economic Security Analysis}
 
 %\subsection{System model}
 
@@ -277,81 +277,42 @@ Here, we need to consider more general attacks because the attacking goal here i
 Roughly, $S$ bits of auxiliary information can be computed in cache and then transferred to memory (which incurs memory IO with a unit cost $c_b$), and $T$ oracle queries can be charged with a unit cost $c_r$.
 This allows us to evaluate the energy cost for any adversary. Note that this cost depends on $k$, which can be adjusted so that the cost is higher than the energy cost of honest farmers.
 
-\section{Consensus Security Analysis (in draft version)}
+\section{Consensus Security Analysis}
 
 Our key inspirations are the following.
 
 \begin{itemize}
     \item When considering longest-chain protocols, Proof-of-Stake (PoS) is less secure than PoW as it presents many additional vulnerabilities (such as long-range attacks). 
-    \item The best we can show is that Proof-of-Archival-Storage (PoAS) stands in the middle, as (useful) storage is not virtual, but is reusable.
+    \item The best we can show is that Proof-of-Archival-Storage (PoAS) stands in the middle.
 \end{itemize}
 
 \subsection{System model}
 
 %On Explicit Constructions of Extremely Depth Robust Graphs
-
 %ZigZag horizontal DRG + vertical DRG
-
-
 %Temporary Block Withholding Attacks on Filecoin's Expected Consensus
 
+The protocol proceeds in slots of duration $\tau$ (where $\tau$ is one second in our PoAS setup). For simplicity, we consider a fixed set of $N$ nodes with equal capability. We
+are interested in the large system regime $N \to \infty$. In each slot, each node can win the lottery with probability $\rho / N$,
+independently of other nodes and slots. When a malicious node wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. (Note that equivocations never happen in PoW but can appear in PoS and PoAS.)
 
 
-Our setup closely follows a very recent paper called ``Modelling Resources in Permissionless Longest-Chain Total-Order Broadcast'' which provides an excellent abstraction for PoS, PoW, and PoAS.
-
-% Modeling Resources in Permissionless Longest-chain Total-order Broadcast
-
-{\bf Time.} The protocol proceeds in time steps $t \in \mathbb{N}$ starting from $0$.
-
-{\bf Processes.} Consider a set of processes $\mathcal{P} = \{ p_1, p_2, \ldots \}$. Since processors can join the system at any time,
-we denote by $\mathcal{P}_t$ the set of all processes that have joined before the time step $t$. Clearly, $\mathcal{P}_t \subseteq \mathcal{P}_{t'}$ 
-for all $t \le t'$.
-
-{\bf Network delay.} We denote by $\Delta \in \mathbb{N}$ with $\Delta \ge 1$ the maximum network delay.
-
-{\bf Blocks.} A block is $B = (h, \overline{tx}, \pi, \sigma)$, where $h$ is a hash value (of its parent block), $\overline{tx}$ is a list of transactions,
-$\pi$ is a resource commitment proof, and $\sigma$ is a signature on $(h, \overline{tx}, \pi)$.
-
-{\bf Blockchain.} A blockchain $\mathcal{C} = [B_0, B_1, \ldots]$ is a chain of blocks with respect to the genesis block $B_0$.
-
-Next, we introduce key definitions to model resources.
-
-{\bf Resource Budget.} A resource budget $r$ is a value in $\mathbb{N}$. At any given time, each process $p_i$ has a resource budget $r_i$.
-Abstractly, there exists a function $\Alloc: \mathcal{P} \times \mathbb{N} \to \mathbb{N}$ that takes as input a process $p_i$
-and a time step $t$, and outputs the resource budget of $p_i$ at time step $t$. Concretely, $\Alloc(p_i, t)$ tells us the number of storage coins
-owned by process $p_i$ at time step $t$.
-
-{\bf Resource Allocator.} This abstraction will allow us to reason about different resources. We need to develop some intuitions first. 
-A process triggers a commit event to pledge its resources to a system, and it can be assigned a resource commitment $\pi$ which allows it to extend the blockchain. Since $\pi$ will be included on-chain, it must be publicly verifiable. Other processes can trigger a validate event to verify $\pi$.
-
-\begin{itemize}
-    \item $\textsc{RA-commit}(p_i, r)$: At time step $t$, every process $p_i$ may request a resource commitment $\pi$ from the resource allocator
-    by invoking \textsc{RA-commit} on its resource budget $0 \le r \le \Alloc(p_i, t)$. That is, $p_i$ doesn't \textsc{RA-commit} more resources than it possesses. At the end of time step $t$, the resource allocator either assigns a resource commitment $\pi$ and a resource budget $r$ or assigns an empty value.
-
-    \item $\textsc{RA-validate}(p_j, \pi)$: Every process $p_j$ may validate a resource commitment $\pi$.
-\end{itemize}
-
-Resources can be classified into various types. Abstractly, these types can be described as the interactions between processes and the resource allocator.
-
-{\bf Virtual.} A resource is virtual when the resource allocator determines the resource budget of all processes from a given blockchain state.
-
-{\bf External.} A resource is external when a process must allocate the resource externally with a budget $r \ge 0$ in order to invoke $\textsc{RA-commit}()$.
-For an external resource, invoking $\textsc{RA-commit}()$ is equivalent to giving resource allocator access to the external resource with the budget $r$.
-
-{\bf Burnable.} A resource is burnable when a process can trigger multiple $\textsc{RA-commit}()$ at a time step $t$ subject to the budget $r$ (i.e., the sum of its committed budget is no greater than $r$).
-
-{\bf Reusable.} A resource is reusable when a process $p_i$ can use the same budget $r \le \Alloc(p_i, t)$ to trigger infinitely many $\textsc{RA-commit}(p_i, r)$ at each time step $t$.
 
 
 \subsection{Analysis}
 
-{\bf Proof Sketch:} Our proof techniques are largely based on the following three papers
-\begin{itemize}
-    \item ``Everything is a Race and Nakamoto Always Wins,'' by Amir Dembo, Sreeram Kannan, Ertern Nusret Tas, David Tse, Pramod Viswanath, Xuechao Wang, and Ofer Zeitouni, CCS'20
-    \item ``Bitcoin's Latency-Security Analysis Made Simple,'' by Dongning Guo and Ling Ren, AFT'22
-    \item ``Modeling Resources in Permissionless Longest-Chain Total-Order Broadcast,'' by Sarah Azouvi, Christian Cachin, Duc V. Le, and Luca Zanolini, arXiv'22
-\end{itemize}
+{\bf Proof Sketch:}
+Following the paper ``Security of Blockchains at Capacity'' (which is available online),  we can define \emph{good} slots, \emph{bad} slots, and \emph{empty} slots based on which we can reason about the consensus security in a rigorous way. Roughly speaking, for any given fraction $\beta$ of malicious nodes, we can find protocol parameters $\tau$  and $\rho$ such that the system is secure. 
 
-More details will come soon!
+\section{Combining Consensus Analysis with Economic Analysis}
+
+
+Ideally, we want to show that an adversary with a percentage of \emph{storage} lower than $\beta$ cannot break the consensus (assuming that $\tau$ and $\rho$ are chosen in the right way). If we only consider adversaries with storage, then it should follow from the previous analysis. Since adversaries can use a wide range of attacks/resources, we would like to model the adversary capabilities by \emph{disruption tokens}. We then proceed as follows.
+
+{\bf Proof Sketch:} We first show that any deviation from the (farming) protocol results in ``work'', i.e. running the MASK function. The protocol is design this way so it should be fairy straightforward. Ideally we would like to show that the adversary would need to have a complete execution of MASK, but since they can store some parts of the PoS table (in the concrete choice of MASK), this is not possible. Yet, ideally we could show that this is the best the adversary can do. If we succeed, it would give us a lower bound on how much work the adversary should do in order to construct a plot on demand (how many tokens it has to spend). (of course, an adversary can stop creating a table in the middle, but this would result in not having a full plot, and thus affect the probability of success, so it should be easy to handle).
+
+Secondly, our aim is to show that the cost of making plots on demand is higher than storing it. Cost here should be modeled by disruption tokens. As an abstract analysis what we want to show (though it will probably be an assumption in the proof) is that \emph{for some system parameters} ``storage requires less disruption tokens than MASK''.  Finally we would like to show that it holds asymptotically. The conclusion is that an adversary with a fixed budget of disruption tokens can do ``the most harm'' if they spend it all on storage, then we fall into the analysis above.
+
+In the actual implementation of the protocol, one would need to associate cost for storage, cost for MASK, and to argue that in those specific parameters the inequality holds.
 
 \end{document}
