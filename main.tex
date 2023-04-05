@@ -303,9 +303,49 @@ independently of other nodes and slots. When a malicious node wins the lottery a
 
 {\bf Proof Sketch:}
 Following the paper ``Security of Blockchains at Capacity'' (which is available online),  we can define \emph{good} slots, \emph{bad} slots, and \emph{empty} slots based on which we can reason about the consensus security in a rigorous way. Roughly speaking, for any given fraction $\beta$ of malicious nodes, we can find protocol parameters $\tau$  and $\rho$ such that the system is secure. 
+Note that the security proof assumes that certain download rules are used by the underlying P2P network. This assumption is reasonable because the download rules are relatively easy to implement.
 
 \section{Combining Consensus Analysis with Economic Analysis}
 
+Expense tokens: for formality we use the abstract notion of "expense tokens" to represent the cost of participation in farming.
+
+Aim: to show that the cost of a single lottery ticket is lowest if following the protocol (dedicating storage for plotting)
+
+--> underlying assumption that all tickets are independent, so the analysis for a single ticket suffices.
+
+(we also need to show that the protocol is "cryptographically secure" in the sense that one has to plot in order to obtain a ticket, that is you cannot break the system and obtain tickets without plotting)
+
+
+--> explain what we mean by cost of storage: keep abstract -- the cost captures "whatever the overall cost is": includes HD cost, plotting -- we can break into fixed + ongoing costs
+
+Claim: let F be a farmer with storage S. Let $T_S$ be the token cost of following the farming protocol per challenge*. Let $T^*$ be the cost of obtaining tickets (define better) in a hybrid strategy that combines storage and compute. Then $T^* \geq T_S$.**
+
+* we may consider all tickets in between replotting phases.
+
+** we eventually want to show that there is order(s) of magnitude difference such that if storage cost raises, the claim still holds.
+
+
+{\bf Proof outline:}
+
+- we assume that the adversary has the entire raw history (archived), and assign it a negligible cost / we don't consider it to be part S (the reason is that for any history size, S can be arbitrary large, making the history size insignificant)
+
+- an honest farmer obtains S/(plot size) lottery tickets
+
+- firstly, we treat MASK (the plotting function) as a block box. That is, one cannot open it, but only enter inputs and recieve outputs. Hence, MASK has a fixed cost per invocation.
+
+-- for the less general claim (at another part of the paper), we can talk about the chosen MASK function, and use Chia's result on time-memory trade-offs.
+
+- MASK is parameterized by a ''difficulty'' parameter $k$. As $k$ grows, running MASK costs more tokens (recall that also the honest party has to run it once per plotting phase).
+
+- We can set $k$ large enough s.t. running it twice, per plot, costs more than $T_S$.
+
+*end of part I
+
+
+
+
+
+OLD version
 
 Ideally, we want to show that an adversary with a percentage of \emph{storage} lower than $\beta$ cannot break the consensus (assuming that $\tau$ and $\rho$ are chosen in the right way). If we only consider adversaries with storage, then it should follow from the previous analysis. Since adversaries can use a wide range of attacks/resources, we would like to model the adversary capabilities by \emph{disruption tokens}. We then proceed as follows.
 
@@ -314,5 +354,7 @@ Ideally, we want to show that an adversary with a percentage of \emph{storage} l
 Secondly, our aim is to show that the cost of making plots on demand is higher than storing it. Cost here should be modeled by disruption tokens. As an abstract analysis what we want to show (though it will probably be an assumption in the proof) is that \emph{for some system parameters} ``storage requires less disruption tokens than MASK''.  Finally we would like to show that it holds asymptotically. The conclusion is that an adversary with a fixed budget of disruption tokens can do ``the most harm'' if they spend it all on storage, then we fall into the analysis above.
 
 In the actual implementation of the protocol, one would need to associate cost for storage, cost for MASK, and to argue that in those specific parameters the inequality holds.
+
+{\bf Comments:} 
 
 \end{document}
