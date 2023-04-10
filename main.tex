@@ -299,39 +299,65 @@ independently of other nodes and slots. When a malicious node wins the lottery a
 
 
 
-\subsection{Analysis}
+\subsection{Proof outline}
 
-{\bf Proof Sketch:}
+
 Following the paper ``Security of Blockchains at Capacity'' (which is available online),  we can define \emph{good} slots, \emph{bad} slots, and \emph{empty} slots based on which we can reason about the consensus security in a rigorous way. Roughly speaking, for any given fraction $\beta$ of malicious nodes, we can find protocol parameters $\tau$  and $\rho$ such that the system is secure. 
 Note that the security proof assumes that certain download rules are used by the underlying P2P network. This assumption is reasonable because the download rules are relatively easy to implement.
+
+Next, we need to understand how to emulate storage coins so that a malicious node can win the lottery with probability $\rho / N$.
+Essentially, it is a function inverting problem. One can compute the function table at the very beginning and then store the entire table in SSD (in the form of transformed pre-images). Alternatively, one can compute the function table and then only store part of the table in SSD (in any form).
+I feel that we just need to focus on the block production opportunity (BPO). In particular, each BPO implies some space-time tradeoff. This completes the proof.
+
+\subsection{Intuitions}
+Here, we will explain why the above proof outline works. The BPO is defined as a pair $(p, t)$ where node $p$ wins the lottery associated with slot $t$ and so is eligible to produce a block. To track the system evolution, we can introduce two random variables $H_t$ and $A_t$ denoting the number of honest and adversarial BPOs in slot $t$, respectively. For simplicity, we assume that blocks in one chain must come from increasing slots. This can be achieved by imposing a constraint on the longest chain protocol. In addition, we assume that honest nodes download at most one block per BPO. This can be achieved by using some specific download rule (called equivocation removal policy) proposed in the paper ``Security of Blockchains at Capacity''.
+
+Following the footsteps of the paper, we can define empty slots and non-empty slots. For a non-empty slot, we can classify it into a good slot or a bad slot. In other words, the proof steps of ``Security of Blockchains at Capacity''  are compatible with our construction. 
+
+Finally, we have the following observations.
+\begin{itemize}
+    \item The parameter $\rho$ doesn't depend on the adversarial action (assuming that the common randomness is not affected by adversarial action). This is because a transformed pre-image is a ticket and only the number of pre-images matters. 
+    \item The proof in ``Security of Blockchains at Capacity'' is based on a counting argument that captures a large range of attacks.
+\end{itemize}
+
+Therefore, we only need to understand the "cost" of emulating a node that wins the lottery with probability $\rho / N$. 
 
 \section{Combining Consensus Analysis with Economic Analysis}
 
 Expense tokens: for formality we use the abstract notion of "expense tokens" to represent the cost of participation in farming.
 
-Aim: to show that the cost of a single lottery ticket is lowest if following the protocol (dedicating storage for plotting)
+Aim: to show that the cost of a single lottery ticket is lowest when following the protocol (dedicating storage for plotting)
 
---> underlying assumption that all tickets are independent, so the analysis for a single ticket suffices.
+We adopt the random-oracle model, and assume the hash functions being used in the protocol are random oracles. Hence, sectors are independent and so the analysis for a single ticket suffices.
 
 (we also need to show that the protocol is "cryptographically secure" in the sense that one has to plot in order to obtain a ticket, that is you cannot break the system and obtain tickets without plotting)
 
 
---> explain what we mean by cost of storage: keep abstract -- the cost captures "whatever the overall cost is": includes HD cost, plotting -- we can break into fixed + ongoing costs
-
-Claim: let F be a farmer with storage S. Let $T_S$ be the token cost of following the farming protocol per challenge*. Let $T^*$ be the cost of obtaining tickets (define better) in a hybrid strategy that combines storage and compute. Then $T^* \geq T_S$.**
+Claim: let $F$ be a farmer with a budget of $T$ expense tokens. Let $A$ be the amount of lottery ticket obtained by following the farming protocol. Let $B$ be the amount of lottery ticket obtained by following a hybrid strategy that combines storage and compute. Then $A \geq B$.**
 
 * we may consider all tickets in between replotting phases.
 
 ** we eventually want to show that there is order(s) of magnitude difference such that if storage cost raises, the claim still holds.
 
 
+Comments (for ourselves as we discuss this):
+
+- We would like the proof to be separated into 2 (maybe 2 lemma): first, it is enough to analyse one sector (due to randomness); second, the cost of obtaining a single ticket is lowest if following the farming protocol.
+
+- The only subtle issue is that some costs are amortised among many sectors, like the hardware (even though compute hardware is modeled to be 0 cost for the attacker).
+
+- How we measure cost: We have the freedom to define "cost of storage" as we wish, but we should make sure that it is well defined. Since hardware storage and plotting is amortised among many challenges, the formal definition should not depend on these.
+
+- explain what we mean by cost of storage: keep abstract -- the cost captures "whatever the overall cost is": includes HD cost, plotting -- we can break into fixed + ongoing costs
+
+
 {\bf Proof outline:}
 
 - we assume that the adversary has the entire raw history (archived), and assign it a negligible cost / we don't consider it to be part S (the reason is that for any history size, S can be arbitrary large, making the history size insignificant)
 
-- an honest farmer obtains S/(plot size) lottery tickets
+- an honest farmer obtains S/(plot size) lottery tickets 
 
-- firstly, we treat MASK (the plotting function) as a block box. That is, one cannot open it, but only enter inputs and recieve outputs. Hence, MASK has a fixed cost per invocation.
+- firstly, we treat MASK (the plotting function) as a block box. That is, one cannot open it, but only enter inputs and receive outputs. Hence, MASK has a fixed cost per invocation.
 
 -- for the less general claim (at another part of the paper), we can talk about the chosen MASK function, and use Chia's result on time-memory trade-offs.
 
@@ -341,7 +367,9 @@ Claim: let F be a farmer with storage S. Let $T_S$ be the token cost of followin
 
 *end of part I
 
+While the above holds, it is not highly significant, if we include all storage costs as part of $S$ (that is, the fixed cost). Indeed, if a HD costs USD80, it is not practical to run MASK for a (token) cost equivalent to that. 
 
+We can make the analyses only for the ongoing cost -- this is probably fine if we can show that the fixed cost is comparable (or less) to the ongoing cost. Or we analyse the bulk of obtained lottery tickets within a plotting phase -- then the claim would be that obtaining this amount of lottery tickets is cheapest using storage, i.e. minimal cost is $T_S$.
 
 
 
