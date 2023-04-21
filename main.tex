@@ -15,6 +15,8 @@
 
 \newcommand{\Alloc}{\textsc{Alloc}}
 \newcommand{\mask}{\textsc{mask}}
+\newcommand{\func}{\textsc{func}}
+\newcommand{\hash}{\textsc{hash}}
 
 \title{Dilithium: Subspace Consensus v2}
 \author{Chen Feng with Subspace R\&D Team}
@@ -27,30 +29,19 @@
 
 \section{Building Blocks}
 
-In this section, we review several building blocks for Subspace Consensus v2 called {\bf Dilithium}. 
-Our main objective is twofold: improving {\bf user experience} and enhancing {\bf security level}.
-In particular, we would like to optimize the following user-experience metrics as much as possible
-\begin{itemize}
-    \item initialization (or setup) time: a few hours to days (depending on the disk space)
-    \item proof-generation time: less than one second
-    \item proof size: less than 500 Bytes
-    \item verification time: much less than one second, ideally in milliseconds
-\end{itemize}
-At the same time, we aim to achieve the highest level of {\bf consensus security} among existing Proof-of-Storage protocols. 
-%We aim to achieve the following objectives
-
-The (relative) small proof size prevents us from using graph-labeling-based constructions (such as those with depth robust graphs used in Filecoin), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size), erasure coding, and Chia PoS tables (as a memory-bound function), to address our design challenge.  
+This section provides an in-depth review of the fundamental building blocks of Dilithium.
+We present how Dilithium combines KZG polynomial commitment, erasure coding, and function inverting through a novel concept called \emph{storage coins} to achieve efficiency and security. We discuss the technical details of each building block and explain how they work together to form the overall protocol design. 
 
 \subsection{Creating Storage Coins}
 
-We divide a file $F$ into $n$ pieces $\{ d_0, d_1, \ldots, d_{n-1}\}$, each of equal size\footnote{We can view $F$ as the blockchain history. In general, $F$ grows over time. Here, we consider the case that $F$ is fixed and defer the general case to our specification.}. 
+We divide a file $F$ into $n$ pieces $\{ d_0, d_1, \ldots, d_{n-1}\}$, each of equal size\footnote{We can view $F$ as the blockchain history. In general, $F$ grows over time. Here, we only consider the case that $F$ is fixed and defer the general case to our protocol specification.}. 
 Without loss of generality, we view each piece as a row vector of length $\ell$ over $\Fp$  (i.e., $d_i \in \Fp^\ell$)\footnote{Here, we choose $\Fp$ because we would like to apply KZG polynomial commitment later.}.
 Then, $F$ can be viewed as a matrix of size $n \times \ell$ over $\Fp$.
 Alternatively, each piece $d_i$ can be viewed as a polynomial $f_i(x)$ over $\Fp$ of degree at most $\ell - 1$. 
-Then, $F$ can be viewed as a collection of $n$ polynomials $\{ f_i(x) \}_{i = 0}^{n-1}$. 
+This allows us to view $F$ as a collection of $n$ polynomials $\{ f_i(x) \}_{i = 0}^{n-1}$. 
 
 We assume that each farmer creates a farmer ID $\id$ uniformly at random over some domain. For example, $\id$ can be a (cryptographic) hash output of a farmer's public key $\pk$ (i.e., $\id = H(\pk)$).
-We also assume that each farmer selects $m$ pieces (out of $n$ pieces) in a random yet verifiable way based on its farmer ID.
+We also assume that each farmer selects $m$ pieces (out of $n$ pieces) in a random yet \emph{verifiable} way based on its farmer ID.
 We denote these $m$ pieces (or equivalently, polynomials) by $\{g_0^{\id}(x), \ldots, g_{m-1}^{\id}(x) \}$.
 For example, each $g_i^{\id}(x)$ can be selected as $f_{(\id + i)\% n}(x)$, where $\% n$ is the mod $n$ operation\footnote{By abuse of notation, we convert $\id$ (from its domain) into an integer here.}.
 As another example\footnote{This example corresponds to a standard coupon collector's problem. In order to make sure that every piece is selected by some farmer, we need a total of $O\left( \frac{n \ln n}{m} \right)$ farmers.}, each $g_i^{\id}(x)$ can be selected as $f_{H(\id, i)\% n}(x)$.
@@ -69,7 +60,7 @@ Alternatively, we can evaluate $F^{\id}(x)$ at another set of $\ell$ points: $\i
 
 
 Why is a storage coin useful? If we collect all $\ell$ storage coins associated with $\id$, we can recover $F^{\id}(x)$ through polynomial interpolation.
-In particular, if we collect all $\ell$ evaluation points for some $g_i^{\id}(x)$, we can recover $g_i^{\id}(x)$ through polynomial interpolation.
+In particular, if we collect all $\ell$ evaluation points for some polynomial $g_i^{\id}(x)$, we can recover $g_i^{\id}(x)$ through polynomial interpolation.
 (There are some fast algorithms for polynomial interpolation with $\mathcal{O}(\ell \log^2(\ell))$ complexity.)
 In other words, storage coins allow us to recover some pieces of the file $F$ efficiently. Hence, they represent {\bf useful storage} for $F$.
 
@@ -81,76 +72,90 @@ We consider the following two cases.
     \item The verifier doesn't know any $A_i$. In this case, we can create a KZG commitment $T$ for $\{ A_i \}_{i = 0}^{n - 1}$ and then give $T$ to the verifier\footnote{Since $A_i$ is not an element in $\Fp$, we cannot apply KZG directly. Instead, we need to hash $A_i$ so that $H(A_i) \in \Fp$.}.  The farmer needs to provide two KZG proofs: one for the polynomial evaluation $g_i^{\id}(x)$ at point $\id + j$ and the other for the correctness of $g_i^{\id}(x)$. (That is, $g_i^{\id}(x)$ is chosen correctly according to our rule. For example, the commitment of $g_i^{\id}(x)$ is indeed $A_{(\id + i)\% n}$, which can be proven by using $T$.)
 \end{enumerate}
 
+\subsection{Creating Random Challenges}
+
+We start with a high-level overview. At each time slot (say, one second), every farmer observes some global randomness (also referred to as the global challenge). 
+Based on this global challenge, each farmer determines exactly one storage coin (out of $\ell$ storage coins) to scan. Since a storage coin contains $m$ elements in $\Fp$, this gives a farmer $m$ ``tickets'' to win the lottery. A ticket is called a winning ticket if it is close enough to the global challenge in terms of the Hamming distance.
+
+More formally, let $\mathcal{C}_t$ be the global challenge at time slot $t$. Then, each farmer computes
+\[
+H(\mathcal{C}_t, \id) \mbox{ mod } \ell
+\]
+in order to decide which storage coin to scan.
+For example, if 
+\[
+H(\mathcal{C}_t, \id) \mbox{ mod } \ell = j,
+\]
+then the farmer will scan $F^{\id}(\id + j)$, hoping to find a winning ticket (out of $m$ tickets). 
+Alternatively, if $\mathcal{C}_t$ and $\id$ share the same domain, each farmer can simply compute
+\[
+\mathcal{C}_t \oplus \id \mbox{ mod } \ell
+\]
+to decide which storage coin to scan, since $\oplus$ operation is easier than $H(\cdot)$ operation. 
+Once a farmer finds a winning ticket, it can produce a new block.
+Clearly, this leader-election mechanism is in spirit similar to Proof-of-Work (one CPU, one vote) and Proof-of-Stake (one coin, one vote).
+
+In the above construction, anyone in the system can figure out whether a particular farmer has a winning ticket, because all the operations depend on the farmer's public key $\pk$ (through $\id$) but not on the secret key $\sk$.  
+The construction can be made privacy-preserving as follows. 
+Each farmer creates a {\bf local challenge} by signing the global challenge $\mathcal{C}_t$ with its secret key $\sk$. Based on its local challenge, each farmer determines exactly one storage coin (in the same way as before) to find a winning ticket that is close enough to its local challenge. A farmer reveals its local challenge only after a winning ticket is found.
 
 \subsection{Masking Storage Coins}
 
-We propose to use a memory-bound (or memory-bandwidth-hard) function to ``mask" storage coins. The function $\mask(\cdot)$ should have the following three properties
+The previous construction is susceptible to the so-called on-the-fly computing attacks. Specifically, an attacker can store only one copy of $F$
+and then ``emulate'' as many farmer IDs as possible by using its computation rather than storage resource.
+Essentially, a storage coin $F^{\id}(\id + j)$ is a collection of $m$ polynomial evaluations at point $\id + j$, which can be computed on the fly. 
 
-\begin{enumerate}
-    \item It has a tunable parameter $k$ to adjust the memory requirement. 
-    \item It has two inputs $\seed$ and $\ind$, where $\seed$ determines the memory content (e.g., some function tables)
-    and $\ind \in \{0, 1, \ldots, 2^k - 1 \}$ specifies in-memory computation.
-    \item It has a single output (of size depending on $k$) that can be verified with a small amount of memory and time.
-\end{enumerate}
+In order to mitigate this attack, we propose to ``mask" storage coins via function inverting. 
+Consider a family of functions $\func_{\seed}: \mathcal{D}_k \to [2^k]$, where $\mathcal{D}_k$ is the domain\footnote{Two examples of $\mathcal{D}_k$ will be given in the next section.} and 
+$[2^k] = \{0, 1, \ldots, 2^k - 1 \}$ is the co-domain. Note that both domain $\mathcal{D}_k$ and co-domain $[2^k]$  depend on the parameter $k$.
 
+For simplicity, we assume that $\func_{\seed}(\cdot)$ is surjective in this section (which will be relaxed in later sections). This allows us to define a ``right inverse'' $\mask_{\seed}: [2^k] \to \mathcal{D}_k$ of $\func_{\seed}$ such that for any $\ind \in [2^k]$, we have
+\[
+\func_{\seed}\left( \mask_{\seed}(\ind) \right) = \ind. 
+\]
+Essentially, $\mask_{\seed}(\ind)$ returns a pre-image of $\ind$ under $\func_{\seed}$.
 
-%For example, $\seed$ determines some computation tables 
-Note that $\mask(\seed, \ind; k)$ and $\mask(\seed, \ind + 1; k)$ share the same memory content, but $\mask(\seed, \ind; k)$
-and $\mask(\seed + 1, \ind; k)$ don't. For notational simplicity, we use $[2^k]$ to denote the set $\{0, 1, \ldots, 2^k - 1 \}$.
 
 Next, we explain how to mask a storage coin
 \[
 F^{\id}(\id + j) = \begin{bmatrix} g_0^{\id}(\id + j)\\ g_1^{\id}(\id + j)\\  \vdots \\ g_{m-1}^{\id}(\id + j) \end{bmatrix}.
 \]
 We denote by $\cmt\left(g_i^{\id}(x)\right)$ the KZG commitment of $g_i^{\id}(x)$.
-For each $g_i^{\id}(\id + j)$ (where $j \in [2^k]$), we set
+For each $g_i^{\id}(x)$, we set
 \[
-\seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right) \mbox{ and } \ind = j.
+\seed = \id \oplus H\left( \cmt\left(g_i^{\id}(x)\right) \right).
 \]
-Then, we compute $g_i^{\id}(\id + j) \oplus H\left( \mask(\seed, \ind; k) \right)$ as a masked version of $g_i^{\id}(\id + j)$, denoted by $\tilde{g}_i^{\id}(\id + j)$.
+Then, for any $j \in [2^k]$, we compute $g_i^{\id}(\id + j) \oplus H\left( \mask_{\seed}(j) \right)$ as a masked version of $g_i^{\id}(\id + j)$, denoted by $\tilde{g}_i^{\id}(\id + j)$.
 Applying this procedure to all $\{ g_i^{\id}(\id + j) \}_{i = 0}^{m - 1}$, we obtain a {\bf masked storage coin}.
-For efficient use of memory, a farmer can mask $\ell$ points for some polynomial $g_i^{\id}(x)$ (in order to reuse the memory content) and then move to another polynomial, say $g_{i+1}^{\id}(x)$.
+As we will soon see, for the purpose of efficiency, a farmer can mask $\ell$ points for a polynomial $g_i^{\id}(x)$ and then move to another polynomial, say $g_{i+1}^{\id}(x)$.
 Alternatively,
-we can use $H\left( \mask(\seed, j; k) \right)$ to mask $g_i^{\id}(\id \cdot \omega^j)$ instead of $g_i^{\id}(\id + j)$, where $\omega$ is a primitive root of unity\footnote{In the C-KZG library, $\omega$ is chosen such that $\omega^{2 \ell} = 1$.}.
+we can use $H\left( \mask_{\seed}(j) \right)$ to mask $g_i^{\id}(\id \cdot \omega^j)$ instead of $g_i^{\id}(\id + j)$, where $\omega$ is a primitive root of unity\footnote{In the C-KZG library, $\omega$ is chosen such that $\omega^{2 \ell} = 1$.}.
 
-\subsection{Creating Random Challenges}
+Why is the masking function $\mask_{\seed}(\cdot)$ useful? First, the attacker has to invert $m$ functions on-the-fly in order to emulate a masked  storage coin. This requires excessive space-time resources, as we will see later.
+Second, the attacker cannot reuse its space-time resources to emulate different farmer IDs. In particular, even if two farmer IDs have a same polynomial in common, the attacker still needs to invert two different functions (because of the difference in $\seed$). 
 
-We start with a high-level overview. At each time slot (say, one second), every farmer observes some global randomness (also referred to as the global challenge). 
-Based on this global challenge, each farmer determines exactly one masked storage coin (out of $\ell$ masked storage coins) to scan. Since a storage coin contains $m$ elements in $\Fp$, this gives a farmer $m$ ``tickets'' to win the lottery. A ticket is called a winning ticket if it is close enough to the global challenge in terms of the Hamming distance.
-
-Let $\mathcal{C}_t$ be the global challenge at time slot $t$. Each farmer computes $H(\mathcal{C}_t, \id)$ mod $\ell$ in order to decide which storage coin to scan.
-For example, if 
-\[
-H(\mathcal{C}_t, \id) \mbox{ mod } \ell = j,
-\]
-then the farmer will scan a masked version of $F^{\id}(\id + j)$, hoping to find an element that is close enough to $\mathcal{C}_t$ in terms of the Hamming distance. 
-Alternatively, if $\mathcal{C}_t$ and $\id$ share the same domain, each farmer can compute $\mathcal{C}_t \oplus \id$ mod $\ell$ to decide which storage coin to scan, since $\oplus$ operation is easier than $H(\cdot)$ operation. 
-
-In the above construction, anyone in the system can figure out whether a particular farmer has a winning ticket, because all the operations depend on the farmer's public key $\pk$ (through $\id$) but not on the secret key $\sk$.  
-There is another way of creating random challenges that protect this privacy. 
-Each farmer creates a {\bf local challenge} by signing the global challenge $\mathcal{C}_t$ with its secret key $\sk$. Based on its local challenge, each farmer determines exactly one storage coin (in the same way as before) to find a winning ticket that is close enough to its local challenge. A farmer can reveal its local challenge only after a winning ticket is found.
 
 \subsection{Putting Everything Together}
 
-Recall that the file $F$ consists of $n$ pieces $\{d_i\}_{i = 0}^{n-1}$, which can be viewed as $n$ polynomials $\{ f_i(x) \}_{i = 0}^{n-1}$. Recall that
+We are now ready to put all the building blocks together. Recall that the file $F$ consists of $n$ pieces $\{d_i\}_{i = 0}^{n-1}$, which can be viewed as $n$ polynomials $\{ f_i(x) \}_{i = 0}^{n-1}$. Recall that
 $A_i$ is the KZG commitment of $f_i(x)$ and $T$ is the KZG commitment of $(H(A_0), \ldots, H(A_{n-1}))$. We assume that $T$ is public information.
 Let $\pi_i$ be the KZG proof for $H(A_i)$. With $\pi_i$, anyone in the system can verify whether $A_i$ is consistent with the public information $T$.
 
 Each farmer generates a key pair $(\sk, \pk)$ and derives its farmer ID $\id$ (e.g., $\id = H(\pk)$).
 With a given $\id$, the farmer selects $m$ polynomials $\{g_i^{\id}(x) \}_{i = 0}^{m - 1}$ and retrieves their KZG commitments $\{\cmt\left(g_i^{\id}(x) \right \}_{i = 0}^{m - 1}$
 together with the proofs with respect to $T$. Then, the farmer creates $\ell$ storage coins 
-$\{ F^{\id}(\id + j) \}_{j = 0}^{\ell - 1}$ and generates their masked versions by using the function $\mask(\cdot)$ as described before.
+$\{ F^{\id}(\id + j) \}_{j = 0}^{\ell - 1}$ and generates their masked versions by using the function $\mask_{\seed}(\cdot)$ as described before.
 Finally, the farmer stores $\ell$ masked storage coins as well as some metadata (i.e., $m$ commitments $\{\cmt\left(g_i^{\id}(x) \right \}_{i = 0}^{m - 1}$ together with their proofs).
-This process is often called {\bf plotting} in the literature.
+This process is often called {\bf plotting} in the Proof-of-Storage literature.
 
-Recall that a global challenge $\mathcal{C}_t$ is generated at time slot $t$, based on which each farmer collects $m$ lottery tickets from one masked storage coin. If a farmer finds a winning ticket, it has to prove the following
+Recall that a global challenge $\mathcal{C}_t$ is generated at time slot $t$, based on which each farmer selects one masked storage coin and collects $m$ lottery tickets from it. If a farmer finds a winning ticket, it has to prove the following
 \begin{itemize}
     \item the winning ticket (say, $\tilde{g}_i^{\id}(\id + j)$) is indeed close enough to $\mathcal{C}_t$
     \item the unmasked element ${g}_i^{\id}(\id + j)$ is correct
 \end{itemize}
-This process is called {\bf auditing} in the literature. 
+This process is called {\bf farming} in the literature. 
 
-
+The above construction provides a leader-election mechanism, which can be combined with some longest chain protocol to produce a consensus algorithm.
 
 % \subsection{Advantages of Our Construction}
 
@@ -166,34 +171,34 @@ This process is called {\bf auditing} in the literature.
 % \end{enumerate}
 
 
+
+
 \section{Extensions}
 
-Our basic construction relies on an ``ideal'' function $\mask(\cdot)$ that has three properties. The first two properties are easy to achieve, but not the third one. Indeed, we don't have a concrete example of $\mask(\cdot)$ at the time of writing. Instead, we have a weaker version of $\mask(\cdot)$ in which the third property is relaxed. In this version, $\seed$ and $k$ determine a random function $h(\cdot)$ that requires a significant amount 
-of space to invert, and the output of $\mask(\cdot)$ is a pre-image of $\ind$ under $h$. Since the pre-image (of $\ind$ under $h$) can be empty or a set with multiple elements, the output of $\mask(\cdot)$ is not always a single value. We would like to show that this is not an issue.
-To this end, we consider three possible examples of $\mask(\cdot)$.
+Our basic construction assumes that $\func_{\seed}(\cdot)$ is surjective. In this section, we explain how to relax this assumption through two examples.
 
-\noindent {\bf Example 1:} $h(\cdot)$ is a random function with its domain and co-domain being the set
+% relies on an ``ideal'' function $\mask(\cdot)$ that has three properties. The first two properties are easy to achieve, but not the third one. Indeed, we don't have a concrete example of $\mask(\cdot)$ at the time of writing. Instead, we have a weaker version of $\mask(\cdot)$ in which the third property is relaxed. In this version, $\seed$ and $k$ determine a random function $h(\cdot)$ that requires a significant amount 
+% of space to invert, and the output of $\mask(\cdot)$ is a pre-image of $\ind$ under $h$. Since the pre-image (of $\ind$ under $h$) can be empty or a set with multiple elements, the output of $\mask(\cdot)$ is not always a single value. We would like to show that this is not an issue.
+% To this end, we consider three possible examples of $\mask(\cdot)$.
+
+\noindent {\bf Example 1:} Construct $\func_{\seed}: [2^k] \to [2^k]$ as 
 \[
-[2^k] \triangleq \{ 0, 1, \ldots, 2^k - 1  \}.
+\func_{\seed}(x) = \hash(\seed \| x),
 \]
-For this example\footnote{Note that the resulting $\mask(\cdot)$ from Example~1 is not a memory-bound function. In other words, Example~1 is just a warm-up example.}, we have the following observations:
-\begin{itemize}
-    \item $\ind \in [2^k]$;
-    \item Around $1/e$ fraction of $\ind$ has no pre-images for large $k$;
-    \item The maximum number of pre-images is upper bounded by $\ln(2^k)/\ln\left( \ln(2^k) \right)$ with high probability.
-\end{itemize}
+where $\|$ denotes concatenation and $\hash: [*] \to [2^k]$ is a cryptographic hash function.
+Then, under the random oracle model, for any given $\seed$, $\func_{\seed}: [2^k] \to [2^k]$ is a random function 
+that maps an input in $[2^k]$ to an output uniformly chosen from $[2^k]$.
 
-In order to use $h(\cdot)$, we consider three cases for some $\ind \in [2^k]$.
+Let $\ind \in [2^k]$. We have the following two cases.
 \begin{enumerate}
-    \item $\ind$ has a unique pre-image under $h$. In this case, we simply compute $g_i^{\id}(\id + \ind) \oplus H\left( h^{-1}(\ind) \right)$ as a masked version of $g_i^{\id}(\id + \ind)$ as we did before.
-    \item $\ind$ has no pre-image under $h$. In this case, we skip $g_i^{\id}(\id + \ind)$, leaving the element $g_i^{\id}(\id + \ind)$ unmasked.
-    \item $\ind$ has multiple pre-images under $h$. In this case, we mask $g_i^{\id}(\id + \ind)$ with one such pre-image.
+    \item $\ind$ has at least one pre-image under $\func_{\seed}$. In this case, $\mask_{\seed}(\ind)$ is well defined and we simply mask $g_i^{\id}(\id + \ind)$ as we did before.
+    \item $\ind$ has no pre-image under $\func_{\seed}$. In this case, $\mask_{\seed}(\ind)$ doesn't exist and we cannot mask $g_i^{\id}(\id + \ind)$, leavng it unmasked.
 \end{enumerate}
 Then, for each storage coin $F^{\id}(\id + \ind)$ at point $\id + \ind$, we only store its masked elements (and discard its unmasked elements).
 
 Previously, we need a total of $\ell$ storage coins (in order to recover the original pieces). How many storage coins do we need now?
 Clearly, this number $L$ should be between $\ell$ and $2^k$ (i.e., $\ell < L \le 2^k$).
-In fact, it is a standard balls-and-bins problem. 
+In fact, this question is closely related to the balls-and-bins problem. 
 Suppose that we have $2^k$ balls and $2^k$ bins with each ball placed into a bin uniformly at random and independent of each other.
 Then, the fraction of empty bins is approximately $\frac{1}{e}$ for large $2^k$.
 In other words, the fraction of non-empty bins is approximately $1 - \frac{1}{e}$.
@@ -206,19 +211,68 @@ This can be used as a guideline for choosing $L$.
 
 %A concern here: the variance creates grinding opportunities (because the number of tickets is no longer fixed). Luckily, we can show that the variance is indeed small.
 
-{\bf Example 2:} $h(\cdot)$ is constructed via a random function $g : [2^k] \times [2^k] \to [2^k]$
-and a random permutation $f: [2^k] \to [2^k]$ by following the Beyond-Hellman paper. Specifically, 
-$h(\cdot)$ is defined as $h(x) = g(x, x')$, where $f(x) = \pi( f(x') )$ with $\pi$ being any involution
-without a fixed point (e.g., flipping all the bits). In this example, since any pair $(x, x')$ with $f(x) = \pi( f(x') )$ can be viewed as a ball, our analysis for Example~1 still applies here. Also, a pre-image of $h(\cdot)$ is of the form $(x, x')$ rather than $x$ only, because otherwise the verifier has to find $x'$.
+\noindent {\bf Example 2:} Let $p: [2^k] \to [2^k]$ be a random permutation. Define the domain $\mathcal{D}_k \subset [2^k] \times [2^k]$ as the set 
+\[
+\{ (x_1, x_2) : p(x_1) = \pi\left( p(x_2) \right) \},
+\]
+where $\pi$ can be any involution without a fixed point (e.g., flipping all the bits).
+Construct $\func_{\seed}: \mathcal{D}_k \to [2^k]$ as 
+\[
+\func_{\seed}(x_1, x_2) = \hash(\seed \| x_1 \| x_2).
+\]
 
-{\bf Example 3:} $h(\cdot)$ is constructed via Chia PoS tables. In this example, an output is of the form $(x_1, x_2, \ldots, x_{64})$. Assume that all seven functions $f_1(x), \ldots, f_7(x)$  are random functions.
-Then, for any \emph{weakly distinct} tuple $(x_1, x_2, \ldots, x_{64})$, the probability it passes the challenge is $2^{-64k}$.
-Note that in Example~2, for any \emph{weakly distinct} tuple $(x_1, x_2)$, the probability it passes the challenge is approximately $2^{-2k}$. Therefore, our analysis for Example~2 is a good approximation.
+In Example~2, we can view any $(x_1, x_2) \in \mathcal{D}_k$ as a ball and so
+our analysis for Example~1 still applies here. 
+Note that $\mask_{\seed}(\cdot)$ here returns an element in $\mathcal{D}_k$ instead of $[2^k]$.
+%Also, a pre-image of $h(\cdot)$ is of the form $(x, x')$ rather than $x$ only, because otherwise the verifier has to find $x'$.
+
+There are some interesting space-time lower bounds in the literature 
+related to Examples~1 and 2. 
+
+\noindent {\bf Lower Bound 1:}
+For any oracle-aided algorithm $\mathcal{A}$, it holds that for most random functions
+$\func: [2^k] \to [2^k]$, if $\mathcal{A}$ is given advice (that can arbitrarily depend on $\func$)
+of size $S$, makes at most $T$ oracle queries and inverts $\func$ on $\epsilon 2^k$ values, we have
+\[
+S \cdot T \in \Omega\left(\epsilon 2^k \right).
+\]
+
+\noindent {\bf Lower Bound 2:}
+For any oracle-aided algorithm $\mathcal{A}$, it holds that for most functions
+$\func: \mathcal{D}_k \to [2^k]$ constructed in Example~2, if $\mathcal{A}$ is given advice (that can arbitrarily depend on $\func$)
+of size $S$, makes at most $T$ oracle queries and inverts $\func$ on $\epsilon 2^k$ values, we have
+\[
+S^2 \cdot T \in \Omega\left(\epsilon^2 2^{2k} \right).
+\]
+
+However, Lower Bound~2 only applies when $T \le \left(2^k/4 e \right)^{2/3}$. This restriction seems to be mostly related to the proof technique. Here, we conjecture that it still holds even when $T > \left(2^k/4 e \right)^{2/3}$.
+
+Let us compare these two lower bounds. For simplicity, we set $\epsilon = 1$ and $S = \sqrt{2^k}$. Then, Lower Bound~1 says that 
+$T \in \Omega\left(\sqrt{2^k} \right)$ and Lower Bound~2 states that $T \in \Omega\left( 2^k \right)$.
+That is, Lower Bound~2 requires significantly longer time $T$ under the same amount of space $S$, because the function in Example~2 is more complicated than that in Example~1.
+Intuitively, we can achieve a better lower bound 
+\[
+S^q \cdot T \in \Omega\left(\epsilon^q 2^{qk} \right)
+\]
+with $q \ge 3$ if we make the function $\func$ even more complicated. A particular approach is given in [X], which is the key idea behind the Chia project.
+
+% {\bf Example 3:} $h(\cdot)$ is constructed via Chia PoS tables. In this example, an output is of the form $(x_1, x_2, \ldots, x_{64})$. Assume that all seven functions $f_1(x), \ldots, f_7(x)$  are random functions.
+% Then, for any \emph{weakly distinct} tuple $(x_1, x_2, \ldots, x_{64})$, the probability it passes the challenge is $2^{-64k}$.
+% Note that in Example~2, for any \emph{weakly distinct} tuple $(x_1, x_2)$, the probability it passes the challenge is approximately $2^{-2k}$. Therefore, our analysis for Example~2 is a good approximation.
+
+Finally, recall that the number of storage coins $L$ satisfies $\ell < L \le 2^k$. Since we need to invert $\func(\cdot)$ on $L$ values (for $\ind \in \{0, 1, \ldots, L - 1 \}$), we can rewrite the above lower bound in a simpler form 
+\[
+S^q \cdot T \in \Omega\left(L^q \right).
+\]
+
+In the plotting phase, we essentially find pre-images of all $L$ values  and then XOR a pre-image of $\ind$ (if it exists) with the corresponding polynomial evaluation at $\id + \ind$. 
+This corresponds to one extreme case of the space-time lower bound where we set $S = L$.
+On the other hand, on-the-fly computing corresponds to the other extreme case where we set $S = 1$ and obtain $T \in \Omega\left(L^q \right)$.
 
 
 We now understand the extensions of our basic construction. Before conducting a formal analysis, let us present several possible attacks and their mitigation methods in order to better understand our construction.
 
-{\bf Attack 1:} If $\mask(\seed, \ind; k)$ returns multiple outputs, an attacker can produce multiple tickets instead of one.
+{\bf Attack 1:} If $\mask_{\seed}(\cdot)$ returns multiple outputs, an attacker can produce multiple tickets instead of one.
 
 \begin{itemize}
     \item Mitigation Method 1: If the verifier can figure out which output is the first, then this issue can be resolved.
@@ -324,56 +378,85 @@ Therefore, we only need to understand the ``cost'' of emulating a node that wins
 
 \section{Combining Consensus Analysis with Economic Analysis}
 
+Aim: to show that the cost of participation in the consensus protocol is lowest when following the protocol (dedicating storage for plotting).
+
 Expense tokens: for formality we use the abstract notion of "expense tokens" to represent the cost of participation in farming.
 
-Aim: to show that the cost of a single lottery ticket is lowest when following the protocol (dedicating storage for plotting)
+Method: the analysis is reduced to measuring the cost of obtaining a single ``lottery ticket''.
 
-We adopt the random-oracle model, and assume the hash functions being used in the protocol are random oracles. Hence, sectors are independent and so the analysis for a single ticket suffices.
+Framework: we adopt the random-oracle model, and assume the hash functions being used in the protocol are random oracles. Hence, sectors are independent and so the analysis for a single sector suffices.
 
-(we also need to show that the protocol is "cryptographically secure" in the sense that one has to plot in order to obtain a ticket, that is you cannot break the system and obtain tickets without plotting)
+{\bf Claim I:} Consider a farmer with $r$ sectors. For any $c$, let $C_{r-1}$ be the cost of obtaining $c(r-1)$ lottery tickets in the 'first' $r-1$ sectors. Then, the cost of obtaining $c$ tickets in the remaining sector is $C_{r-1}/r$. In other words, the farming-costs per sector are equal.
+
+(we also need to show that the protocol is "cryptographically secure" in the sense that one has to plot in order to obtain a ticket, that is one cannot break the system and obtain tickets without plotting)
+
+{\bf Claim II:} Farmers needs to plot sectors in order to participate in consensus.
 
 
-Claim: let $F$ be a farmer with a budget of $T$ expense tokens. Let $A$ be the amount of lottery ticket obtained by following the farming protocol. Let $B$ be the amount of lottery ticket obtained by following a hybrid strategy that combines storage and compute. Then $A \geq B$.**
+\textbf{Part I: abstract MASK function}
 
-* we may consider all tickets in between replotting phases.
+\textbf{Framework}
+
+- We assume that the adversary has the entire raw history (archived), and assign it a negligible cost / we don't consider it to be part of the available storage $S$ (the reason is that for any history size, $S$ can be arbitrary large, making the history size insignificant).
+
+- The plotting function MASK is parameterized by a value $k$. Running MASK with larger $k$ costs more expense tokens.
+
+- We treat MASK as a block box. That is, one cannot "open" it, but only enter inputs and receive outputs. Hence, for a fixed $k$, MASK has a fixed cost per invocation.
+
+
+
+We explain that any deviation from the (farming) protocol results in creating more sectors, hence running MASK more times.
+
+{\bf Claim III:} Consider a farmer $F$ with storage $S$ and let $r = S/(sector-size)$. Suppose that a sector gives $c$ tickets per challenge/slot. For any challenge, if $F$ obtains more than $cr$ tickets, then $F$ created more than $r$ sectors.
+
+{\bf proof sketch:} The protocol is designed such that any deviation requires running MASK, essentially creating a new plot.
+
+
+{\bf Claim IV:} Suppose that a sector gives $c$ tickets per challenge. Let $T_S$ be the cost of obtaining $c$ lottery tickets with a single sector following the farming protocol. Let $T^*$ be the cost of obtaining $c$ lottery tickets in a hybrid strategy that combines storage and compute. Then $T^* \geq T_S$.**
 
 ** we eventually want to show that there is order(s) of magnitude difference such that if storage cost raises, the claim still holds.
 
 
-Comments (for ourselves as we discuss this):
-
-- We would like the proof to be separated into 2 (maybe 2 lemma): first, it is enough to analyse one sector (due to randomness); second, the cost of obtaining a single ticket is lowest if following the farming protocol.
-
-- The only subtle issue is that some costs are amortised among many sectors, like the hardware (even though compute hardware is modeled to be 0 cost for the attacker).
-
-- How we measure cost: We have the freedom to define "cost of storage" as we wish, but we should make sure that it is well defined. Since hardware storage and plotting is amortised among many challenges, the formal definition should not depend on these.
-
-- explain what we mean by cost of storage: keep abstract -- the cost captures "whatever the overall cost is": includes HD cost, plotting -- we can break into fixed + ongoing costs
-
-
 {\bf Proof outline:}
 
-- we assume that the adversary has the entire raw history (archived), and assign it a negligible cost / we don't consider it to be part S (the reason is that for any history size, S can be arbitrary large, making the history size insignificant)
+Consider the hybrid strategy:
 
-- an honest farmer obtains S/(plot size) lottery tickets 
+- By Claim II, since the farmer obtains $c$ tickets, it has to create at least one sector.
 
-- firstly, we treat MASK (the plotting function) as a block box. That is, one cannot open it, but only enter inputs and receive outputs. Hence, MASK has a fixed cost per invocation.
-
--- for the less general claim (at another part of the paper), we can talk about the chosen MASK function, and use Chia's result on time-memory trade-offs.
+- By the proof of Claim III, since the farmer does not follow the farming protocol it must create at least another sector, resulting in running MASK.
 
 - MASK is parameterized by a ''difficulty'' parameter $k$. As $k$ grows, running MASK costs more tokens (recall that also the honest party has to run it once per plotting phase).
 
-- We can set $k$ large enough s.t. running it twice, per plot, costs more than $T_S$.
+- We can set $k$ large enough s.t. running it twice costs (significantly) more than $T_S$.
 
-*end of part I
+\textbf{Discussion:} The previous claim shows that the marginal cost of farming honestly, once a sector is created, is lower than (seleting and) creating another sector. This is because obtaining more tickets per challenge requires running MASK, which is designed to consume more tokens. Hence, it is best to run MASK (plot sectors) as little as possible, and only pay the ongoing cost. 
 
-While the above holds, it is not highly significant, if we include all storage costs as part of $S$ (that is, the fixed cost). Indeed, if a HD costs USD80, it is not practical to run MASK for a (token) cost equivalent to that. 
-
-We can make the analyses only for the ongoing cost -- this is probably fine if we can show that the fixed cost is comparable (or less) to the ongoing cost. Or we analyse the bulk of obtained lottery tickets within a plotting phase -- then the claim would be that obtaining this amount of lottery tickets is cheapest using storage, i.e. minimal cost is $T_S$.
+This, however, does not take into account a farmer that consumed all of its storage and still has tokens to spare. We would like to show that in this case the farmer better purchase more disk space and follow the farming protocol (assuming the amount of tokens left is not negligible). The modification to the claim above is very little, where we make sure that $k$ is large enough to account for this extra cost, amortised on the potential sectors.
 
 
 
-OLD version
+
+\textbf{Part II: the actual MASK function}
+
+
+
+\textbf{Part III: 'security' of the PoAS in the concrete blockchain design}
+(if we see fit this may be combined with Part II)
+
+
+Comments (for ourselves as we discuss this):
+
+- The only subtle issue is that some costs are amortised among many sectors, like the hardware (even though compute hardware is modeled to be 0 cost for the attacker).
+
+- How we measure cost: we have the freedom to define "cost of storage" as we wish, but we should make sure that it is well defined. Since hardware storage and plotting is amortised among many challenges, the formal definition should not depend on these.
+
+- explain what we mean by cost of storage: keep abstract -- the cost captures "whatever the overall cost is": includes HD cost, plotting -- we can break into fixed + ongoing costs
+
+- if we succeed in making the claim generic enough then the conclusion holds for \textit{any time frame} in which the (honest) farmer decide to spend their entire token budget (that is, the honest farmer can plot a single sector and let it consume expense token "slowly" or she can plot as many sectors as the storage he has let her, consuming more tokens).
+
+\end{document}
+
+\textbf{OLD version}
 
 Ideally, we want to show that an adversary with a percentage of \emph{storage} lower than $\beta$ cannot break the consensus (assuming that $\tau$ and $\rho$ are chosen in the right way). If we only consider adversaries with storage, then it should follow from the previous analysis. Since adversaries can use a wide range of attacks/resources, we would like to model the adversary capabilities by \emph{disruption tokens}. We then proceed as follows.
 
@@ -382,7 +465,3 @@ Ideally, we want to show that an adversary with a percentage of \emph{storage} l
 Secondly, our aim is to show that the cost of making plots on demand is higher than storing it. Cost here should be modeled by disruption tokens. As an abstract analysis what we want to show (though it will probably be an assumption in the proof) is that \emph{for some system parameters} ``storage requires less disruption tokens than MASK''.  Finally we would like to show that it holds asymptotically. The conclusion is that an adversary with a fixed budget of disruption tokens can do ``the most harm'' if they spend it all on storage, then we fall into the analysis above.
 
 In the actual implementation of the protocol, one would need to associate cost for storage, cost for MASK, and to argue that in those specific parameters the inequality holds.
-
-{\bf Comments:} 
-
-\end{document}
