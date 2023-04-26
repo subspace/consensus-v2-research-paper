@@ -26,8 +26,39 @@
 
 \maketitle
 
+\begin{abstract}
+    Dilithium is a new Proof-of-Storage consensus protocol designed to provide superior
+    user experience while maintaining the highest level 
+    of consensus security among existing protocols.
+    Developed at Subspace Labs, Dilithium combines KZG polynomial commitment and erasure coding
+    in a unique way to achieve unprecedented efficiency. 
+    In this paper, we present the fundamental construction of Dilithium
+    and outline its security proofs. We also present our initial implementation results to demonstrate the protocol's practicality.
+    Our early experimental evaluations show that Dilithium can significantly enhance the user experience while maintaining strong security guarantees, making it a promising candidate for practical deployment.
+\end{abstract}
 
-\section{Building Blocks}
+\section{Introduction}
+
+[To Barak: Let us tell the story of Proof-of-Storage protocols and then position our own protocol. Perhaps you are more familiar with the history and I will leave it to you.]
+
+[On my end, I would like to emphasize the following after your story.]
+
+
+Chia is fast but for useless data. Filecoin is slow but for usefull data. Can we have the best of both worlds?
+
+In terms of user experience, we would like to optimize the following metrics
+\begin{itemize}
+    \item initialization (or setup) time: a few hours to days (depending on the disk space)
+    \item proof-generation time: less than one second
+    \item proof size: less than 500 Bytes
+    \item verification time: much less than one second, ideally in milliseconds
+\end{itemize}
+At the same time, we aim to achieve the highest level of {consensus security} among existing Proof-of-Storage protocols. 
+%We aim to achieve the following objectives
+
+The (relative) small proof size prevents us from using graph-labeling-based constructions (such as those with depth robust graphs used in Filecoin), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size), erasure coding, and function inverting, to address our design challenge. 
+
+\section{Building Blocks of Dilithium}
 
 This section provides an in-depth review of the fundamental building blocks of Dilithium.
 We present how Dilithium combines KZG polynomial commitment, erasure coding, and function inverting through a novel concept called \emph{storage coins} to achieve efficiency and security. We discuss the technical details of each building block and explain how they work together to form the overall protocol design. 
