@@ -39,7 +39,11 @@
 
 \section{Introduction}
 
-[To Barak: Let us tell the story of Proof-of-Storage protocols and then position our own protocol. Perhaps you are more familiar with the history and I will leave it to you.]
+\textit{Proof of storage} is an alternative to proof of work which can be used to secure blockchain networks. An entity, called a \textit{farmer}, contributes disk space as the underlying resource. As such it is minimal on energy consumption. Additionally, as an external resource and widely distributed, it does not suffer from complexities incurred in proof-of-stake-based networks.
+
+Previous proof-of-storage constructions include the work in the proof-of-space Spacemint paper, the proof-of-space-and-time protocol Chia and the proof-of-space-time protocol Spacemesh. These constructions fill the disk space with "cryptographic data", basically chunks of bytes that cannot be used elsewhere besides for the proving protocol, to guarantee the uniqueness of data between different farmers. Filecoin on the other hand is a blockchain based on proof of replication. In Filecoin the aim is to store several copies of a file. For other related works, see Section 1.2 in Spacemint.
+
+Say a few words on the Subspace previous (secure) protocol, and the reason to construct a new one.
 
 [On my end, I would like to emphasize the following after your story.]
 
@@ -264,17 +268,18 @@ related to Examples~1 and 2.
 For any oracle-aided algorithm $\mathcal{A}$, it holds that for most random functions
 $\func: [2^k] \to [2^k]$, if $\mathcal{A}$ is given advice (that can arbitrarily depend on $\func$)
 of size $S$, makes at most $T$ oracle queries and inverts $\func$ on $\epsilon 2^k$ values, we have
-\[
-S \cdot T \in \Omega\left(\epsilon 2^k \right).
-\]
+\begin{equation}
+    S \cdot T \in \Omega\left(\epsilon 2^k \right).
+\end{equation}
+
 
 \noindent {\bf Lower Bound 2:}
 For any oracle-aided algorithm $\mathcal{A}$, it holds that for most functions
 $\func: \mathcal{D}_k \to [2^k]$ constructed in Example~2, if $\mathcal{A}$ is given advice (that can arbitrarily depend on $\func$)
 of size $S$, makes at most $T$ oracle queries and inverts $\func$ on $\epsilon 2^k$ values, we have
-\[
-S^2 \cdot T \in \Omega\left(\epsilon^2 2^{2k} \right).
-\]
+\begin{equation}
+    S^2 \cdot T \in \Omega\left(\epsilon^2 2^{2k} \right).
+\end{equation}
 
 However, Lower Bound~2 only applies when $T \le \left(2^k/4 e \right)^{2/3}$. This restriction seems to be mostly related to the proof technique. Here, we conjecture that it still holds even when $T > \left(2^k/4 e \right)^{2/3}$.
 
@@ -292,9 +297,9 @@ with $q \ge 3$ if we make the function $\func$ even more complicated. A particul
 % Note that in Example~2, for any \emph{weakly distinct} tuple $(x_1, x_2)$, the probability it passes the challenge is approximately $2^{-2k}$. Therefore, our analysis for Example~2 is a good approximation.
 
 Finally, recall that the number of storage coins $L$ satisfies $\ell < L \le 2^k$. Since we need to invert $\func(\cdot)$ on $L$ values (for $\ind \in \{0, 1, \ldots, L - 1 \}$), we can rewrite the above lower bound in a simpler form 
-\[
-S^q \cdot T \in \Omega\left(L^q \right).
-\]
+\begin{equation}\label{eq:general_bound}
+    S^q \cdot T \in \Omega\left(L^q \right).
+\end{equation}
 
 In the plotting phase, we essentially find pre-images of all $L$ values  and then XOR a pre-image of $\ind$ (if it exists) with the corresponding polynomial evaluation at $\id + \ind$. 
 This corresponds to one extreme case of the space-time lower bound where we set $S = L$.
@@ -330,82 +335,39 @@ We now understand the extensions of our basic construction. Before conducting a 
 %{\bf Attack 5:} On DSN load balancing.
 
 
-\section{Economic Security Analysis}
 
-%\subsection{System model}
-
-{\bf Outline:} We can use a hardware architecture model to reason about economic security. In particular, we will focus on the memory IO and Hash computation (modelled as an oracle access). We will model the energy cost as a linear combination of the memory IO and oracle access and then derive a lower bounder for the energy cost. We will then include the setup cost. Similar models have already been used in Ling Ren's PhD thesis and other works.
-
-
-
-{\bf Intuition:} First of all, we consider three very simple cases.
-\begin{itemize}
-    \item If an attacker generates the Chia PoS tables on the fly, then the memory IO is lower bounded by the size of the tables.
-    \item If an attacker stores the Chia PoS tables on memory, then the memory storage cost is higher than the disk storage cost.
-    \item If an attacker stores the Chia PoS tables on disk, then we can make the size of tables larger than the masked storage coins.
-\end{itemize}
-
-Next, for Hellman's attacks, we can lower bound their memory IO and computational costs.
-Here, we need to consider more general attacks because the attacking goal here is to minimize the total cost.
-
-{\bf Proof Sketch:} Our proof is based on the following ingredients. 
-
-\begin{itemize}
-    \item Space-time tradeoff lower bound (from the ``Beyond Hellman'' paper): 
-    any adversary who gets $S$ bits of auxiliary information, makes at most $T$
-    oracle queries, and inverts $h(\cdot)$ (defined in Example~2 above) on an
-    $\epsilon$ fraction of outputs must satisfy $S^2 \cdot T \in \Omega(\epsilon^2 N^2)$ (where $N$
-    is the domain size and $N = 2^k$ in our notation).
-    \item Energy cost in the parallel random oracle model (from the ``Bandwidth-Hard Functions'' paper): a formal definition of energy costs is given based on a simple memory-cache model.
-\end{itemize}
-
-Roughly, $S$ bits of auxiliary information can be computed in cache and then transferred to memory (which incurs memory IO with a unit cost $c_b$), and $T$ oracle queries can be charged with a unit cost $c_r$.
-This allows us to evaluate the energy cost for any adversary. Note that this cost depends on $k$, which can be adjusted so that the cost is higher than the energy cost of honest farmers.
 
 \section{Consensus Security Analysis}
 
-Our key inspirations are the following.
+In this section, we conduct an initial security analysis based on the previous space-time lower bound.
+Our key observation is twofold. First, the previous lower bounds capture the amount of resources one needs 
+to have in order to fake storage coins. Second, our previous Proof-of-Storage construction can be analyzed
+by using the general framework proposed by XXX.
 
-\begin{itemize}
-    \item When considering longest-chain protocols, Proof-of-Stake (PoS) is less secure than PoW as it presents many additional vulnerabilities (such as long-range attacks). 
-    \item The best we can show is that Proof-of-Archival-Storage (PoAS) stands in the middle.
-\end{itemize}
-
-\subsection{System model}
+\subsection{System Model}
 
 %On Explicit Constructions of Extremely Depth Robust Graphs
 %ZigZag horizontal DRG + vertical DRG
 %Temporary Block Withholding Attacks on Filecoin's Expected Consensus
 
-The protocol proceeds in slots of duration $\tau$ (where $\tau$ is one second in our PoAS setup). For simplicity, we consider a fixed set of $N$ nodes with equal capability. We
-are interested in the large system regime $N \to \infty$. In each slot, each node can win the lottery with probability $\rho / N$,
-independently of other nodes and slots. When a malicious node wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. (Note that equivocations never happen in PoW but can appear in PoS and PoAS.)
+The protocol proceeds in slots of duration $\tau$ as explained before. For simplicity, we consider a fixed set of $N$ farmers (or nodes) with equal capability. We
+are particularly interested in the large system regime $N \to \infty$. In each slot, each farmer can win the lottery with probability $\rho / N$,
+independently of other farmers and slots. When a malicious farmer wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. (Note that equivocations never happen in Proof-of-Work protocols but can appear in our construction.)
 
+\subsection{Faking Storage Coins}
 
-
-
-\subsection{Proof outline}
-
-
-Following the paper ``Security of Blockchains at Capacity'' (which is available online),  we can define \emph{good} slots, \emph{bad} slots, and \emph{empty} slots based on which we can reason about the consensus security in a rigorous way. Roughly speaking, for any given fraction $\beta$ of malicious nodes, we can find protocol parameters $\tau$  and $\rho$ such that the system is secure. 
-Note that the security proof assumes that certain download rules are used by the underlying P2P network. This assumption is reasonable because the download rules are relatively easy to implement.
-
-Next, we need to understand how to emulate storage coins so that a malicious node can win the lottery with probability $\rho / N$.
-Essentially, it is a function inverting problem. One can compute the function table at the very beginning and then store the entire table in SSD (in the form of transformed pre-images). Alternatively, one can compute the function table and then only store part of the table in SSD (in any form).
-I feel that we just need to focus on the block production opportunity (BPO). In particular, each BPO implies some space-time tradeoff. This completes the proof.
-
-\subsection{Intuitions}
-Here, we will explain why the above proof outline works. The BPO is defined as a pair $(p, t)$ where node $p$ wins the lottery associated with slot $t$ and so is eligible to produce a block. To track the system evolution, we can introduce two random variables $H_t$ and $A_t$ denoting the number of honest and adversarial BPOs in slot $t$, respectively. For simplicity, we assume that blocks in one chain must come from increasing slots. This can be achieved by imposing a constraint on the longest chain protocol. In addition, we assume that honest nodes download at most one block per BPO. This can be achieved by using some specific download rule (called equivocation removal policy) proposed in the paper ``Security of Blockchains at Capacity''.
-
-Following the footsteps of the paper, we can define empty slots and non-empty slots. For a non-empty slot, we can classify it into a good slot or a bad slot. In other words, the proof steps of ``Security of Blockchains at Capacity''  are compatible with our construction. 
-
-Finally, we have the following observations.
-\begin{itemize}
-    \item The parameter $\rho$ doesn't depend on the adversarial action (assuming that the common randomness is not affected by adversarial action). This is because a transformed pre-image is a ticket and only the number of pre-images matters. 
-    \item The proof in ``Security of Blockchains at Capacity'' is based on a counting argument that captures a large range of attacks.
-\end{itemize}
-
-Therefore, we only need to understand the ``cost'' of emulating a node that wins the lottery with probability $\rho / N$. 
+The previous lower bound \eqref{eq:general_bound} suggests the following. In order to fake $L$ storage coins of a farmer (i.e., faking a farmer ID), one needs $mS$
+amount of space and makes at most $mT$ oracle queries with $S^q \cdot T \in \Omega\left(L^q \right)$. 
+This allows us to compare our construction with Chia, since the lower bound \eqref{eq:general_bound} applies to both.
+Using our notation, the parameter setup in Chia can be described as $k = 32$, $L = 2^{32}$, $m = 1$, and $q = 6$. 
+In our setup, we can choose $k = 16$, $m = 2^{16}$, and $q = 12$ to conduct a fair comparison, 
+because the required disk space is proportional to $m L$.
+Under the above setups, on-the-fly computing requires at most $\Omega\left( 2^{192} \right)$ oracle queries to fake a farmer ID in Chia,
+while it requires at most $2^{16} \Omega\left(2^{192}\right)$ oracle queries in our construction. 
+Similarly, an attacker $\mathcal{A}$ with space $S$ needs to make at most $\Omega\left( \frac{2^{192}}{S^6}  \right)$
+oracle queries in order to fake a farmer ID in Chia, whereas an attacker $\mathcal{A}'$ with space $m \sqrt{S}$
+needs to make at most $m \Omega\left( \frac{2^{192}}{S^6}  \right)$ oracle queries in our construction.
+This implies that our construction is more resilient than Chia under the above setups, since we always have $m \ge \sqrt{S}$.
 
 \section{Combining Consensus Analysis with Economic Analysis}
 
@@ -486,6 +448,83 @@ Comments (for ourselves as we discuss this):
 - if we succeed in making the claim generic enough then the conclusion holds for \textit{any time frame} in which the (honest) farmer decide to spend their entire token budget (that is, the honest farmer can plot a single sector and let it consume expense token "slowly" or she can plot as many sectors as the storage he has let her, consuming more tokens).
 
 \end{document}
+
+\section{Economic Security Analysis}
+
+%\subsection{System model}
+
+{\bf Outline:} We can use a hardware architecture model to reason about economic security. In particular, we will focus on the memory IO and Hash computation (modelled as an oracle access). We will model the energy cost as a linear combination of the memory IO and oracle access and then derive a lower bounder for the energy cost. We will then include the setup cost. Similar models have already been used in Ling Ren's PhD thesis and other works.
+
+
+
+{\bf Intuition:} First of all, we consider three very simple cases.
+\begin{itemize}
+    \item If an attacker generates the Chia PoS tables on the fly, then the memory IO is lower bounded by the size of the tables.
+    \item If an attacker stores the Chia PoS tables on memory, then the memory storage cost is higher than the disk storage cost.
+    \item If an attacker stores the Chia PoS tables on disk, then we can make the size of tables larger than the masked storage coins.
+\end{itemize}
+
+Next, for Hellman's attacks, we can lower bound their memory IO and computational costs.
+Here, we need to consider more general attacks because the attacking goal here is to minimize the total cost.
+
+{\bf Proof Sketch:} Our proof is based on the following ingredients. 
+
+\begin{itemize}
+    \item Space-time tradeoff lower bound (from the ``Beyond Hellman'' paper): 
+    any adversary who gets $S$ bits of auxiliary information, makes at most $T$
+    oracle queries, and inverts $h(\cdot)$ (defined in Example~2 above) on an
+    $\epsilon$ fraction of outputs must satisfy $S^2 \cdot T \in \Omega(\epsilon^2 N^2)$ (where $N$
+    is the domain size and $N = 2^k$ in our notation).
+    \item Energy cost in the parallel random oracle model (from the ``Bandwidth-Hard Functions'' paper): a formal definition of energy costs is given based on a simple memory-cache model.
+\end{itemize}
+
+Roughly, $S$ bits of auxiliary information can be computed in cache and then transferred to memory (which incurs memory IO with a unit cost $c_b$), and $T$ oracle queries can be charged with a unit cost $c_r$.
+This allows us to evaluate the energy cost for any adversary. Note that this cost depends on $k$, which can be adjusted so that the cost is higher than the energy cost of honest farmers.
+
+\section{Consensus Security Analysis}
+
+Our key inspirations are the following.
+
+\begin{itemize}
+    \item When considering longest-chain protocols, Proof-of-Stake (PoS) is less secure than PoW as it presents many additional vulnerabilities (such as long-range attacks). 
+    \item The best we can show is that Proof-of-Archival-Storage (PoAS) stands in the middle.
+\end{itemize}
+
+\subsection{System model}
+
+%On Explicit Constructions of Extremely Depth Robust Graphs
+%ZigZag horizontal DRG + vertical DRG
+%Temporary Block Withholding Attacks on Filecoin's Expected Consensus
+
+The protocol proceeds in slots of duration $\tau$ (where $\tau$ is one second in our PoAS setup). For simplicity, we consider a fixed set of $N$ nodes with equal capability. We
+are interested in the large system regime $N \to \infty$. In each slot, each node can win the lottery with probability $\rho / N$,
+independently of other nodes and slots. When a malicious node wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. (Note that equivocations never happen in PoW but can appear in PoS and PoAS.)
+
+
+
+
+\subsection{Proof outline}
+
+
+Following the paper ``Security of Blockchains at Capacity'' (which is available online),  we can define \emph{good} slots, \emph{bad} slots, and \emph{empty} slots based on which we can reason about the consensus security in a rigorous way. Roughly speaking, for any given fraction $\beta$ of malicious nodes, we can find protocol parameters $\tau$  and $\rho$ such that the system is secure. 
+Note that the security proof assumes that certain download rules are used by the underlying P2P network. This assumption is reasonable because the download rules are relatively easy to implement.
+
+Next, we need to understand how to emulate storage coins so that a malicious node can win the lottery with probability $\rho / N$.
+Essentially, it is a function inverting problem. One can compute the function table at the very beginning and then store the entire table in SSD (in the form of transformed pre-images). Alternatively, one can compute the function table and then only store part of the table in SSD (in any form).
+I feel that we just need to focus on the block production opportunity (BPO). In particular, each BPO implies some space-time tradeoff. This completes the proof.
+
+\subsection{Intuitions}
+Here, we will explain why the above proof outline works. The BPO is defined as a pair $(p, t)$ where node $p$ wins the lottery associated with slot $t$ and so is eligible to produce a block. To track the system evolution, we can introduce two random variables $H_t$ and $A_t$ denoting the number of honest and adversarial BPOs in slot $t$, respectively. For simplicity, we assume that blocks in one chain must come from increasing slots. This can be achieved by imposing a constraint on the longest chain protocol. In addition, we assume that honest nodes download at most one block per BPO. This can be achieved by using some specific download rule (called equivocation removal policy) proposed in the paper ``Security of Blockchains at Capacity''.
+
+Following the footsteps of the paper, we can define empty slots and non-empty slots. For a non-empty slot, we can classify it into a good slot or a bad slot. In other words, the proof steps of ``Security of Blockchains at Capacity''  are compatible with our construction. 
+
+Finally, we have the following observations.
+\begin{itemize}
+    \item The parameter $\rho$ doesn't depend on the adversarial action (assuming that the common randomness is not affected by adversarial action). This is because a transformed pre-image is a ticket and only the number of pre-images matters. 
+    \item The proof in ``Security of Blockchains at Capacity'' is based on a counting argument that captures a large range of attacks.
+\end{itemize}
+
+Therefore, we only need to understand the ``cost'' of emulating a node that wins the lottery with probability $\rho / N$. 
 
 \textbf{OLD version}
 
