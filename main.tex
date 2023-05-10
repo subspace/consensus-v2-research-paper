@@ -1,9 +1,10 @@
 %\documentclass[12pt,draftcls,onecolumn]{IEEEtran}
-\documentclass[12pt, onecolumn]{IEEEtran}
+\documentclass[conference]{IEEEtran}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{color}
+\usepackage{verbatim}
 
 \newcommand{\Fp}{\mathbb{Z}_p}
 \newcommand{\sk}{\texttt{sk}}
@@ -19,11 +20,16 @@
 \newcommand{\func}{\textsc{func}}
 \newcommand{\hash}{\textsc{hash}}
 
+\usepackage{pgf,tikz}
+\usepackage{scrextend}
+\usepackage{mathrsfs}
+\usetikzlibrary{arrows}
+
 \title{(WIP) Dilithium: A Proof-of-Storage Consensus Protocol for Subspace}
 \author{Chen Feng$^{1,}$$^{ 2}$, Dariia Porechna$^{1}$, Barak Shani$^{1,}$$^{ 3}$, and Jeremiah Wagstaff$^{1}$\\
 $^1$Subspace Labs\\
 $^2$University of British Columbia\\
-$^3$XXX
+$^3$Matter Labs
 \thanks{The authors are listed in alphabetical order.}}
 
 \begin{document}
@@ -46,14 +52,15 @@ $^3$XXX
 \textit{Proof-of-storage} is an intriguing alternative to proof-of-work for blockchain leader-election. 
 Instead of relying on energy-intensive computation, proof-of-storage leverages disk space as the underlying resource, 
 thereby minimizing energy consumption. Since disk space is an external and widely distributed resource, 
-proof-of-storage avoids certain complexities of proof-of-stake (cite a paper here).
+proof-of-storage enjoys unique advantages over proof-of-stake by avoiding certain complexities of proof-of-stake design~\cite{blockchain_resources}.
 
-Prior research in this area includes the proof-of-space protocol introduced in the Spacemint paper (cite), the proof-of-space-and-time protocol 
-implemented in Chia (cite), and the proof-of-space-time protocol utilized by Spacemesh (cite).
+Prior research in this area includes the proof-of-space protocol introduced in the Spacemint paper~\cite{spacemint}, the proof-of-space-and-time protocol 
+implemented in Chia~\cite{chia}, and the proof-of-space-time protocol utilized by Spacemesh~\cite{spacemesh}.
 These constructions fill disk space with cryptographic data - chunks of bytes that are 
-reserved exclusively for proving uniqueness of data. 
+reserved exclusively for proving the ownership of data. 
+In contrast, Filecoin relies on a proof-of-replication mechanism  \cite{proof_of_replication_BFisch}, bla bla. For further exploration of related works, please refer to Seciton 1.2 of the Spacemint paper~\cite{spacemint}.
 
-Previous proof-of-storage constructions include the work in the proof-of-space Spacemint paper, the proof-of-space-and-time protocol Chia and the proof-of-space-time protocol Spacemesh. These constructions fill the disk space with "cryptographic data", basically chunks of bytes that cannot be used elsewhere besides for the proving protocol, to guarantee the uniqueness of data between different farmers. Filecoin, on the other hand, is a blockchain based on proof-of-replication. In Filecoin, the aim is to store several copies of a file. For other related works, see Section 1.2 in Spacemint.
+%Previous proof-of-storage constructions include the work in the proof-of-space Spacemint paper, the proof-of-space-and-time protocol Chia and the proof-of-space-time protocol Spacemesh. These constructions fill the disk space with "cryptographic data", basically chunks of bytes that cannot be used elsewhere besides for the proving protocol, to guarantee the uniqueness of data between different farmers. Filecoin, on the other hand, is a blockchain based on proof-of-replication. In Filecoin, the aim is to store several copies of a file. For other related works, see Section 1.2 in Spacemint.
 
 Say a few words on the Subspace previous (secure) protocol, and the reason to construct a new one.
 
@@ -72,7 +79,7 @@ In terms of user experience, we would like to optimize the following metrics
 At the same time, we aim to achieve the highest level of {consensus security} among existing Proof-of-Storage protocols. 
 %We aim to achieve the following objectives
 
-The (relative) small proof size prevents us from using graph-labeling-based constructions (such as those with depth robust graphs used in Filecoin), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size), erasure coding, and function inverting, to address our design challenge. 
+The (relative) small proof size prevents us from using graph-labeling-based constructions (such as those with depth robust graphs used in Filecoin), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size) \cite{KZG_paper}, erasure coding \cite{erasure}, and function inverting~\cite{beyond_hellman}, to address our design challenge. 
 
 \section{Building Blocks of Dilithium}
 
@@ -202,7 +209,7 @@ Recall that a global challenge $\mathcal{C}_t$ is generated at time slot $t$, ba
 \end{itemize}
 This process is called {\bf farming} in the literature. 
 
-The above construction provides a leader-election mechanism, which can be combined with some longest chain protocol to produce a consensus algorithm.
+The above construction provides a leader-election mechanism, which can be combined with some longest-chain protocol to produce a consensus algorithm.
 
 % \subsection{Advantages of Our Construction}
 
@@ -302,7 +309,7 @@ Intuitively, we can achieve a better lower bound
 \[
 S^q \cdot T \in \Omega\left(\epsilon^q 2^{qk} \right)
 \]
-with $q \ge 3$ if we make the function $\func$ even more complicated. A particular approach is given in [X], which is the key idea behind the Chia project.
+with $q \ge 3$ if we make the function $\func$ even more complicated. A particular approach is given in~\cite{beyond_hellman}, which is the key idea behind the Chia project.
 
 % {\bf Example 3:} $h(\cdot)$ is constructed via Chia PoS tables. In this example, an output is of the form $(x_1, x_2, \ldots, x_{64})$. Assume that all seven functions $f_1(x), \ldots, f_7(x)$  are random functions.
 % Then, for any \emph{weakly distinct} tuple $(x_1, x_2, \ldots, x_{64})$, the probability it passes the challenge is $2^{-64k}$.
@@ -318,31 +325,31 @@ This corresponds to one extreme case of the space-time lower bound where we set 
 On the other hand, on-the-fly computing corresponds to the other extreme case where we set $S = 1$ and obtain $T \in \Omega\left(L^q \right)$.
 
 
-We now understand the extensions of our basic construction. Before conducting a formal analysis, let us present several possible attacks and their mitigation methods in order to better understand our construction.
+% We now understand the extensions of our basic construction. Before conducting a formal analysis, let us present several possible attacks and their mitigation methods in order to better understand our construction.
 
-{\bf Attack 1:} If $\mask_{\seed}(\cdot)$ returns multiple outputs, an attacker can produce multiple tickets instead of one.
+% {\bf Attack 1:} If $\mask_{\seed}(\cdot)$ returns multiple outputs, an attacker can produce multiple tickets instead of one.
 
-\begin{itemize}
-    \item Mitigation Method 1: If the verifier can figure out which output is the first, then this issue can be resolved.
-    \item Mitigation Method 2: We allow the farmers to produce multiple tickets from multiple outputs. This introduces some randomness, which can be bounded by using the analysis above.
-\end{itemize}
+% \begin{itemize}
+%     \item Mitigation Method 1: If the verifier can figure out which output is the first, then this issue can be resolved.
+%     \item Mitigation Method 2: We allow the farmers to produce multiple tickets from multiple outputs. This introduces some randomness, which can be bounded by using the analysis above.
+% \end{itemize}
 
-{\bf Attack 2:} The attacker stores the Chia PoS tables on disk instead of the masked storage coins.
+% {\bf Attack 2:} The attacker stores the Chia PoS tables on disk instead of the masked storage coins.
 
-\begin{itemize}
-    \item Mitigation Method 1: We can choose $k$ so that Chia PoS tables are sufficiently larger than the corresponding masked storage coins.
-    \item Mitigation Method 2: We estimate the amount of additional disk look-ups and then use an economic security argument.
-\end{itemize}
+% \begin{itemize}
+%     \item Mitigation Method 1: We can choose $k$ so that Chia PoS tables are sufficiently larger than the corresponding masked storage coins.
+%     \item Mitigation Method 2: We estimate the amount of additional disk look-ups and then use an economic security argument.
+% \end{itemize}
 
-{\bf Attack 3:} The attacker stores the Chia PoS tables on memory.
+% {\bf Attack 3:} The attacker stores the Chia PoS tables on memory.
 
-\begin{itemize}
-    \item We show that the memory storage cost is larger than the disk storage cost.
-\end{itemize}
+% \begin{itemize}
+%     \item We show that the memory storage cost is larger than the disk storage cost.
+% \end{itemize}
 
-{\bf Note:} Both Attack 2 and Attack 3 can be well mitigated by using a large $k$. However, we have some practical upper bound on $k$. So, we need a {\bf tight analysis} to show that a relatively small $k$ is still OK.
+% {\bf Note:} Both Attack 2 and Attack 3 can be well mitigated by using a large $k$. However, we have some practical upper bound on $k$. So, we need a {\bf tight analysis} to show that a relatively small $k$ is still OK.
 
-{\bf Attack 4:} The attacker exploits the case of expiring pieces. Since this case is not considered in our current model and analysis, there might be some potential attacks here.
+% {\bf Attack 4:} The attacker exploits the case of expiring pieces. Since this case is not considered in our current model and analysis, there might be some potential attacks here.
 
 %{\bf Attack 5:} On DSN load balancing.
 
@@ -354,7 +361,7 @@ We now understand the extensions of our basic construction. Before conducting a 
 In this section, we conduct an initial security analysis based on the previous space-time lower bound.
 Our key observation is twofold. First, the previous lower bounds capture the amount of resources one needs 
 to have in order to emulate storage coins. Second, our previous Proof-of-Storage construction can be analyzed
-by using the general framework proposed by XXX.
+by using the general framework proposed by Kiffer, Neu, Sridhar, Zohar, and Tse~\cite{blockchain_capacity}.
 
 \subsection{System Model}
 
@@ -362,9 +369,11 @@ by using the general framework proposed by XXX.
 %ZigZag horizontal DRG + vertical DRG
 %Temporary Block Withholding Attacks on Filecoin's Expected Consensus
 
-The protocol proceeds in slots of duration $\tau$ as explained before. For simplicity, we consider a fixed set of $N$ farmers (or nodes) with equal capability. We
+The protocol proceeds in slots of duration $\tau$ as explained before. For simplicity, we consider a fixed set of $N$ farmers with equal capability. We
 are particularly interested in the large system regime $N \to \infty$. In each slot, each farmer can win the lottery with probability $\rho / N$,
-independently of other farmers and slots. When a malicious farmer wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. (Note that equivocations never happen in Proof-of-Work protocols but can appear in our construction.)
+independently of other farmers and slots, where $\rho$ is a system parameter. When a malicious farmer wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. Note that equivocations never happen in proof-of-work protocols but can appear in our construction as explained in~\cite{blockchain_capacity}. 
+A malicious farmer can emulate storage by launching Hellman attacks (as explained in~\cite{beyond_hellman}) or it can simply follow our proof-of-storage construction but deviate from the longest-chain protocol.
+We assume that the fraction of malicious farmers is at most $\beta < \frac{1}{2}$. That is, $\beta$ can be viewed as a security threshold indicating the maximum fraction of malicious farmers a system can tolerate.
 
 \subsection{Emulating Storage Coins}
 
@@ -379,25 +388,60 @@ while it requires at most $2^{10} T'$ oracle queries in our construction with $T
 Similarly, an attacker $\mathcal{A}$ with space $S$ needs to make at most $T$
 oracle queries in order to emulate  a farmer ID in Chia with $S^7 \cdot T \in \Omega\left( 2^{224}  \right)$, whereas an attacker $\mathcal{A}'$ with space $m {S}^{\frac{7}{10}}$
 needs to make at most $m T'$ oracle queries in our construction with $S^7 \cdot T' \in \Omega\left( 2^{220}  \right)$.
-This implies that our construction is comparable to Chia (under appropriate parameter selection) in terms of mitigating Hellman attacks (which can be used to emulate storage).
+This implies that our construction is comparable to Chia (under appropriate parameter selection) in terms of mitigating Hellman attacks for emulating storage.
 
-Next, we would like to point out that  our construction enjoys efficient plotting. With a relatively small $k$, all the plotting operations in our construction can be done in memory, thereby eliminating the so-called ``sort on disk'' operation---the bottleneck of the Chia plotting algorithm. 
+Next, we would like to point out that  our construction enjoys efficient plotting. With a relatively small $k$, all the plotting operations in our construction can be done in memory, thereby eliminating the so-called ``sort on disk'' operation---the bottleneck of the Chia plotting algorithm. This enables us to achieve significantly shorter initialization time than Chia.
 
-(To Chen: discuss memory IO here.)
+Finally, we would like to comment on the memory access. It is well known that Hellman attacks require a large amount of memory access. (To be continued.) 
 
 \subsection{Consensus Security}
 
-(To Chen: explain how to apply Joachim's results)
+We notice that our proof-of-storage construction is compatible with the general framework proposed in~\cite{blockchain_capacity}\footnote{Indeed, we have confirmed this with one of the authors.}. This allows us to apply the Theorem~2 of~\cite{blockchain_capacity} to our construction, obtaining the following security result.
+For all $\beta < \frac{1}{2}$ and system parameters $\rho, \tau$ satisfying the condition (16) in~\cite{blockchain_capacity}, our proof-of-storage longest-chain consensus protocol with equivocation removal is secure. By investigating condition (16), we notice that we can achieve a higher security threshold $\beta$ than Chia due to our new lottery design and the use of equivocation removal. An in-depth discussion will be provided in a more elaborated version of this work.
 
 \subsection{Discussion}
 
-(To Barak: Can we integrate your proof outline here?)
+The analysis above shows that in order to participate in the consensus protocol, a farmer can choose between different resources, namely storage $S$ or oracle queries $T$ that capture the amount of compute needed in order to participate in the lottery. Note that with a correct choice of function $\func$, the latter also requires a substantial amount of memory access.
+
+We now turn to discuss how we design the system such that rational farmers always prefer to allocate the storage resource to the system, rather than compute of a combination of both. This makes sure that the protocol does not degrade into proof of work, as well as ease the analysis as it allows us to focus on a single resource, namely storage. The full version will give a rigorous justification.
+
+First we reiterate that since the $\mask_{\seed}(\cdot)$ function depends on the farmer ID, creating any $2$ different plots requires running the function twice as many, thus expending the resources needed to run $\mask_{\seed}(\cdot)$. Moreover, notice that the seed depends also on the particular position $j$ in the column vector $F^{\id}$ (that is, on $g_i^{\id}(x)$), thus even for a fixed $\id$, any change to the plot requires expending the resources needed to run $\mask_{\seed}(\cdot)$.\footnote{We explain that even though the presentation above assumes the entire selected pieces $d_i$ of $F$ are stored in one plot, in practice we divide them into several \emph{sectors}, each with its own \emph{sector id}, and so a farmer could try many sector id's. The comment above explains that for each of these attempts, the farmer would have to pay the cost of running $\mask_{\seed}$. The plotting protocol is still deterministic, as describes above, so one could not create $2$ different sectors with the same farmer id and sector id.}
+
+Secondly, recall that the function $\mask_{\seed}$ is parameterized by a ``difficulty'' parameter $k$. We can therefore set $k$ high enough such that creating plots ``on the fly'' is not profitable, compared to creating a single plot and storing it, which requires running $\mask_{\seed}$ only once.
+
+In more detail, we measure the cost of storing a single piece of (masked) information $d_i$ in between challenges $\mathcal{C}_t$.\footnote{We do not discuss here the methods of cost measuring, but we highlight that one can think of the alternative cost a farmer with, say, 100GB free has for some period of time, given the market for storage. We can then derive the corresponding values for the size of any $d_i$ and the challenge slot duration. We remark that this cost should also take into account the operational cost, like electricity.}\footnote{We would like also to consider the cost of obtaining the storage device in first place, assuming the farmer did not have free space -- the reason is to explain that the ``attacker'' may use their funds to buy storage. This should be a negligible cost in the long run, and we do not discuss it here. This is also the case for running $\mask_{\seed}$.} A single piece $d_i$ gives some amount $c$ (e.g. $c=1$) of lottery tickets per challenge $\mathcal{C}_t$.
+
+Then, we measure the cost of running $\mask_{\seed}$ with parameter $k$ once. Running $\mask_{\seed}$ once enables to produce a single masked piece $d_i$.\footnote{Here we assume that the dishonest farmer has the entire file $F$ unmasked, hence she can draw any piece $d_i$, and assign it no extra cost (as this can be amortised among all of the attacker IDs).} This gives the farmer $c$ lottery tickets per challenge $\mathcal{C}_t$ as well. Since we have control over $k$, we can make sure that the latter cost is significantly higher that the former, thus making protocol deviation an irrational strategy.
+
 
 \section{Initial Experimental Results}
 
-(To Dariia: We can describe our experimental results on KZG as well as the current plotting, proving, and verification performance with $k = 16$ and $q = 7$.)
+In the current prototype implementation, we have achieved the following performance results for the KZG algorithms: 
+\begin{itemize}
+    \item inverse FFT to create polynomial for KZG ($2^{15}$ elements) $\approx 1.6 ms$
+    \item KZG commitment ($2^{15}$ elements) $\approx 40 ms$
+    \item KZG witness creation (for a single element of $2^{15}$ elements) $\approx40 ms$
+    \item KZG witness verification $\approx 865 \mu s$
+\end{itemize}
+For the Chia-based PoS $k = 17$ and $q = 7$:
+\begin{itemize}
+    \item Generation of $q$ tables $\approx 360 ms$
+    \item Masking $2^{15}$ points of the record polynomial $\approx 4 ms$
+    \item Constructing a proof-of-space $\approx 450 ns$
+    \item Verifying a proof-of-space $\approx 25 \mu s$
+\end{itemize}    
+For the complete protocol the numbers are the following:
+\begin{itemize}
+    \item Plotting a single sector of 1300 records $\approx 680 s$
+    \item Auditing a single storage coin in a single sector $\approx 4.5 \mu s$
+    \item Recovering of a record from the plot $\approx 980 ms$
+    \item Proving a winning ticket $\approx 1 s$
+\end{itemize}
+Plotting has also shown a consistent usage of 3 GB of memory. Generation of PoS tables is expectedly heavily memory bound $\approx24\%$ and $\approx 22,0\%$ core bound.                Recovering of a record from the plot consists of reading from disk all the storage coins that contain chunks of it, re-generating the corresponding PoS table, XOR-unmasking and erasure code recovery. Proving a winning ticket consists of recovering the parent record, computing a PoS proof and computing a KZG witness.
+The numbers provided were obtained on common consumer hardware - Apple M1Pro 2021, 10 cores (8 performance and 2 efficiency) and 16 GB memory. There is still potential for optimizations in both plotting and proving phases. 
 
 
+\begin{comment}
 \section{Combining Consensus Analysis with Economic Analysis}
 
 Aim: to show that the cost of participation in the consensus protocol is lowest when following the protocol (dedicating storage for plotting).
@@ -423,7 +467,7 @@ Framework: we adopt the random-oracle model, and assume the hash functions being
 
 - The plotting function MASK is parameterized by a value $k$. Running MASK with larger $k$ costs more expense tokens.
 
-- We treat MASK as a block box. That is, one cannot "open" it, but only enter inputs and receive outputs. Hence, for a fixed $k$, MASK has a fixed cost per invocation.
+- We treat MASK as a black box. That is, one cannot "open" it, but only enter inputs and receive outputs. Hence, for a fixed $k$, MASK has a fixed cost per invocation.
 
 
 
@@ -475,9 +519,392 @@ Comments (for ourselves as we discuss this):
 - explain what we mean by cost of storage: keep abstract -- the cost captures "whatever the overall cost is": includes HD cost, plotting -- we can break into fixed + ongoing costs
 
 - if we succeed in making the claim generic enough then the conclusion holds for \textit{any time frame} in which the (honest) farmer decide to spend their entire token budget (that is, the honest farmer can plot a single sector and let it consume expense token "slowly" or she can plot as many sectors as the storage he has let her, consuming more tokens).
+\end{comment}
+
 
 \section*{Acknowledgement}
-The authors would like to thank Shashank Agrawal and Joachim Neu for fruitful discussions throughout this project. CF would like to thank Khadijeh Bagheri,  Hoang Dau, and Hassan Khodaiemehr for their useful comments on a draft version of this work.
+The authors would like to thank Shashank Agrawal and Joachim Neu for fruitful discussions throughout this project. CF would like to thank Khadijeh Bagheri, Hoang Dau, and Hassan Khodaiemehr for their useful comments on a draft version of this work.
+\begin{figure*}
+\definecolor{wwccqq}{rgb}{0.4,0.8,0.} %blockchains color
+\definecolor{qqqqcc}{rgb}{0.,0.,0.8} %MASK
+\definecolor{dcrutc}{rgb}{0.8627450980392157,0.0784313725490196,0.23529411764705882} %KZG proofs
+\definecolor{ccffcc}{rgb}{0.8,1.,0.8} %Farmers
+\definecolor{ffzzqq}{rgb}{1.,0.6,0.} %H color
+\definecolor{qqzzff}{rgb}{0.,0.6,1.} %Commit
+\begin{addmargin}[-1em]{0em}
+\begin{tikzpicture}[line cap=round,line join=round,>=triangle 45,x=1.0cm,y=1.0cm]
+\clip(-2.614586914064175,-20.15503204157287) rectangle (17.039468142260514,2.5412428722987683);
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (0.6650403483010345,2.252882635736503) -- (2.269953999116951,2.252882635736503) -- (2.269953999116951,1.4245401062831302) -- (0.6650403483010345,1.4245401062831302) -- cycle;
+%===================================
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (1.818,-6.45) -- (2.9,-6.45) -- (2.9,-8.3) -- (1.818,-8.3) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (1.9400,-11.15) -- (2.9,-11.15) -- (2.9,-13) -- (1.9400,-13) -- cycle;
+%===================================
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (0.6650403483010345,1.0793973856775576) -- (2.269953999116951,1.0793973856775576) -- (2.269953999116951,0.2510548562241848) -- (0.6650403483010345,0.2510548562241848) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (0.7180048123904461,-0.5927331001421212) -- (2.322918463206361,-0.5927331001421212) -- (2.322918463206361,-1.421075629595494) -- (0.7180048123904461,-1.421075629595494) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (2.9840182861914197,2.252882635736503) -- (4.588931937007336,2.252882635736503) -- (4.588931937007336,1.4245401062831302) -- (2.9840182861914197,1.4245401062831302) -- cycle;
+\fill[line width=2.pt,color=qqzzff,fill=qqzzff,fill opacity=0.1] (5.418945120976323,2.2142330034383306) -- (7.723858771792239,2.2142330034383306) -- (7.723858771792239,1.3858904739849578) -- (5.418945120976323,1.3858904739849578) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (2.9646934700423326,1.0547440344931456) -- (4.569607120858249,1.0547440344931456) -- (4.569607120858249,0.22640150503977274) -- (2.9646934700423326,0.22640150503977274) -- cycle;
+\fill[line width=2.pt,color=qqzzff,fill=qqzzff,fill opacity=0.1] (5.360970672529065,0.9967695860458878) -- (7.665884323344981,0.9967695860458878) -- (7.665884323344981,0.168427056592515) -- (5.360970672529065,0.168427056592515) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (2.9840182861914197,-0.5685405220301103) -- (4.588931937007336,-0.5685405220301103) -- (4.588931937007336,-1.3968830514834831) -- (2.9840182861914197,-1.3968830514834831) -- cycle;
+\fill[line width=2.pt,color=qqzzff,fill=qqzzff,fill opacity=0.1] (5.360970672529065,-0.5878653381791974) -- (7.665884323344981,-0.5878653381791974) -- (7.665884323344981,-1.4162078676325702) -- (5.360970672529065,-1.4162078676325702) -- cycle;
+\fill[line width=2.pt,color=ffzzqq,fill=ffzzqq,fill opacity=0.1] (8.745715532151925,2.252882635736503) -- (10.350629182967838,2.252882635736503) -- (10.350629182967838,1.4245401062831302) -- (8.745715532151925,1.4245401062831302) -- cycle;
+\fill[line width=2.pt,color=ffzzqq,fill=ffzzqq,fill opacity=0.1] (8.758877888902111,1.0135856019266232) -- (10.363791539718024,1.0135856019266232) -- (10.363791539718024,0.18524307247325034) -- (8.758877888902111,0.18524307247325034) -- cycle;
+\fill[line width=2.pt,color=ffzzqq,fill=ffzzqq,fill opacity=0.1] (8.718004812390424,-0.5927331001421212) -- (10.322918463206337,-0.5927331001421212) -- (10.322918463206337,-1.421075629595494) -- (8.718004812390424,-1.421075629595494) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (12.742240963545123,2.352882635736501) -- (13.247154614361039,2.352882635736501) -- (13.247154614361039,-1.4754598937168613) -- (12.742240963545123,-1.4754598937168613) -- cycle;
+\fill[line width=2.pt,color=qqzzff,fill=qqzzff,fill opacity=0.1] (14.099803567248562,0.8880549125817581) -- (16.404717218064505,0.8880549125817581) -- (16.404717218064505,0.05971238312838523) -- (14.099803567248562,0.05971238312838523) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (0.718791425238348,-3.5114097527777703) -- (2.323705076054254,-3.5114097527777703) -- (2.323705076054254,-4.339752282231143) -- (0.718791425238348,-4.339752282231143) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (4.067221140513448,-3.20994488658799) -- (6.3721347913293815,-3.20994488658799) -- (6.3721347913293815,-4.6382874160413605) -- (4.067221140513448,-4.6382874160413605) -- cycle;
+\fill[line width=2.pt,color=dcrutc,fill=dcrutc,fill opacity=0.1] (10.456149422292592,-2.1695557595211077) -- (11.161063073108538,-2.1695557595211077) -- (11.161063073108538,-3.997898288974477) -- (10.456149422292592,-3.997898288974477) -- cycle;
+\fill[line width=2.pt,color=dcrutc,fill=dcrutc,fill opacity=0.1] (11.219002673448236,-2.188051617467356) -- (11.923916324264182,-2.188051617467356) -- (11.923916324264182,-4.016394146920725) -- (11.219002673448236,-4.016394146920725) -- cycle;
+\fill[line width=2.pt,color=dcrutc,fill=dcrutc,fill opacity=0.1] (12.557843292172995,-2.171104267863247) -- (13.262756942988942,-2.171104267863247) -- (13.262756942988942,-3.999446797316616) -- (12.557843292172995,-3.999446797316616) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.55] (10.407049543911524,-4.545281720780878) -- (13.31196319472746,-4.545281720780878) -- (13.31196319472746,-4.773624250234253) -- (10.407049543911524,-4.773624250234253) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (0.008660190017908853,-6.43434762492424) -- (1.815765821324768,-6.43434762492424) -- (1.815765821324768,-8.262690154377612) -- (0.008660190017908853,-8.262690154377612) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (0.12987894392951116,-11.161879027476715) -- (1.9369845752363686,-11.161879027476715) -- (1.9369845752363686,-12.990221556930091) -- (0.12987894392951116,-12.990221556930091) -- cycle;
+\fill[line width=2.pt,color=qqqqcc,fill=qqqqcc,fill opacity=0.1] (0.147195908774024,-9.32628075395817) -- (1.752109559589928,-9.32628075395817) -- (1.752109559589928,-10.154623283411542) -- (0.147195908774024,-10.154623283411542) -- cycle;
+\fill[line width=2.pt,color=wwccqq,fill=wwccqq,fill opacity=0.1] (-0.5024902877693558,-14.732608826535447) -- (-1.0960736538904081,-15.103598430361114) -- (-1.0715789154979827,-15.803151506598658) -- (-0.45350081098450445,-16.131714979010535) -- (0.14008255513654805,-15.760725375184869) -- (0.11558781674412272,-15.061172298947325) -- cycle;
+\fill[line width=2.pt,color=wwccqq,fill=wwccqq,fill opacity=0.1] (2.7587997933661246,-14.739901776026734) -- (2.165216427245082,-15.1108913798524) -- (2.1897111656375126,-15.810444456089936) -- (2.8077892701509857,-16.139007928501805) -- (3.401372636272028,-15.768018324676138) -- (3.3768778978795977,-15.068465248438603) -- cycle;
+\fill[line width=2.pt,color=wwccqq,fill=wwccqq,fill opacity=0.1] (6.8818880632113295,-14.610078361458243) -- (6.288304697090288,-14.98106796528391) -- (6.312799435482719,-15.680621041521444) -- (6.930877539996192,-16.009184513933313) -- (7.524460906117234,-15.638194910107647) -- (7.4999661677248035,-14.938641833870111) -- cycle;
+\fill[line width=2.pt,fill=black,fill opacity=0.05] (10.512485726572443,-14.431068034658) -- (15.3195913578793,-14.431068034658) -- (15.3195913578793,-16.259410564111377) -- (10.512485726572443,-16.259410564111377) -- cycle;
+\draw [line width=2.pt] (0.6650403483010345,2.252882635736503)-- (2.269953999116951,2.252882635736503);
+\draw [line width=2.pt] (2.269953999116951,2.252882635736503)-- (2.269953999116951,1.4245401062831302);
+\draw [line width=2.pt] (2.269953999116951,1.4245401062831302)-- (0.6650403483010345,1.4245401062831302);
+\draw [line width=2.pt] (0.6650403483010345,1.4245401062831302)-- (0.6650403483010345,2.252882635736503);
+\draw (1.2808113853875651,2.123340145473461) node[anchor=north west] {$d_0$};
+\draw [line width=2.pt] (0.6650403483010345,1.0793973856775576)-- (2.269953999116951,1.0793973856775576);
+\draw [line width=2.pt] (2.269953999116951,1.0793973856775576)-- (2.269953999116951,0.2510548562241848);
+\draw [line width=2.pt] (2.269953999116951,0.2510548562241848)-- (0.6650403483010345,0.2510548562241848);
+\draw [line width=2.pt] (0.6650403483010345,0.2510548562241848)-- (0.6650403483010345,1.0793973856775576);
+\draw [line width=2.pt] (0.7180048123904461,-0.5927331001421212)-- (2.322918463206361,-0.5927331001421212);
+\draw [line width=2.pt] (2.322918463206361,-0.5927331001421212)-- (2.322918463206361,-1.421075629595494);
+\draw [line width=2.pt] (2.322918463206361,-1.421075629595494)-- (0.7180048123904461,-1.421075629595494);
+\draw [line width=2.pt] (0.7180048123904461,-1.421075629595494)-- (0.7180048123904461,-0.5927331001421212);
+\draw (1.2217901990322357,-0.6580098004023876) node[anchor=north west] {$d_{n-1}$};
+\draw (1.2808113853875651,0.944312877220389) node[anchor=north west] {$d_1$};
+\draw [line width=2.pt] (2.9840182861914197,2.252882635736503)-- (4.588931937007336,2.252882635736503);
+\draw [line width=2.pt] (4.588931937007336,2.252882635736503)-- (4.588931937007336,1.4245401062831302);
+\draw [line width=2.pt] (4.588931937007336,1.4245401062831302)-- (2.9840182861914197,1.4245401062831302);
+\draw [line width=2.pt] (2.9840182861914197,1.4245401062831302)-- (2.9840182861914197,2.252882635736503);
+\draw [line width=2.pt,color=qqzzff] (5.418945120976323,2.2142330034383306)-- (7.723858771792239,2.2142330034383306);
+\draw [line width=2.pt,color=qqzzff] (7.723858771792239,2.2142330034383306)-- (7.723858771792239,1.3858904739849578);
+\draw [line width=2.pt,color=qqzzff] (7.723858771792239,1.3858904739849578)-- (5.418945120976323,1.3858904739849578);
+\draw [line width=2.pt,color=qqzzff] (5.418945120976323,1.3858904739849578)-- (5.418945120976323,2.2142330034383306);
+\draw [line width=2.pt] (2.9646934700423326,1.0547440344931456)-- (4.569607120858249,1.0547440344931456);
+\draw [line width=2.pt] (4.569607120858249,1.0547440344931456)-- (4.569607120858249,0.22640150503977274);
+\draw [line width=2.pt] (4.569607120858249,0.22640150503977274)-- (2.9646934700423326,0.22640150503977274);
+\draw [line width=2.pt] (2.9646934700423326,0.22640150503977274)-- (2.9646934700423326,1.0547440344931456);
+\draw [line width=2.pt,color=qqzzff] (5.360970672529065,0.9967695860458878)-- (7.665884323344981,0.9967695860458878);
+\draw [line width=2.pt,color=qqzzff] (7.665884323344981,0.9967695860458878)-- (7.665884323344981,0.168427056592515);
+\draw [line width=2.pt,color=qqzzff] (7.665884323344981,0.168427056592515)-- (5.360970672529065,0.168427056592515);
+\draw [line width=2.pt,color=qqzzff] (5.360970672529065,0.168427056592515)-- (5.360970672529065,0.9967695860458878);
+\draw [line width=2.pt] (2.9840182861914197,-0.5685405220301103)-- (4.588931937007336,-0.5685405220301103);
+\draw [line width=2.pt] (4.588931937007336,-0.5685405220301103)-- (4.588931937007336,-1.3968830514834831);
+\draw [line width=2.pt] (4.588931937007336,-1.3968830514834831)-- (2.9840182861914197,-1.3968830514834831);
+\draw [line width=2.pt] (2.9840182861914197,-1.3968830514834831)-- (2.9840182861914197,-0.5685405220301103);
+\draw [line width=2.pt,color=qqzzff] (5.360970672529065,-0.5878653381791974)-- (7.665884323344981,-0.5878653381791974);
+\draw [line width=2.pt,color=qqzzff] (7.665884323344981,-0.5878653381791974)-- (7.665884323344981,-1.4162078676325702);
+\draw [line width=2.pt,color=qqzzff] (7.665884323344981,-1.4162078676325702)-- (5.360970672529065,-1.4162078676325702);
+\draw [line width=2.pt,color=qqzzff] (5.360970672529065,-1.4162078676325702)-- (5.360970672529065,-0.5878653381791974);
+\draw (3.2580211282911002,2.1517671905924417) node[anchor=north west] {$f_0(x)$};
+\draw (3.198999941935771,-0.67684961662758515) node[anchor=north west] {$f_{n-1}(x)$};
+\draw (3.2580211282911002,0.944312877220389) node[anchor=north west] {$f_1(x)$};
+\draw (5.3,2.040156283291213) node[anchor=north west] {KZG Commit};
+\draw (5.3,0.8611290150381405) node[anchor=north west] {KZG Commit};
+\draw (5.3,-0.7305577971035068) node[anchor=north west] {KZG Commit};
+\draw (1.398853758098224,0.4484694711495653) node[anchor=north west] {$\vdots$};
+\draw (3.6416588396007414,0.4189937894432385) node[anchor=north west] {$\vdots$};
+\draw (6.356633411945894,0.3895181077369117) node[anchor=north west] {$\vdots$};
+\draw [line width=2.pt,color=ffzzqq] (8.745715532151925,2.252882635736503)-- (10.350629182967838,2.252882635736503);
+\draw [line width=2.pt,color=ffzzqq] (10.350629182967838,2.252882635736503)-- (10.350629182967838,1.4245401062831302);
+\draw [line width=2.pt,color=ffzzqq] (10.350629182967838,1.4245401062831302)-- (8.745715532151925,1.4245401062831302);
+\draw [line width=2.pt,color=ffzzqq] (8.745715532151925,1.4245401062831302)-- (8.745715532151925,2.252882635736503);
+\draw [line width=2.pt,color=ffzzqq] (8.758877888902111,1.0135856019266232)-- (10.363791539718024,1.0135856019266232);
+\draw [line width=2.pt,color=ffzzqq] (10.363791539718024,1.0135856019266232)-- (10.363791539718024,0.18524307247325034);
+\draw [line width=2.pt,color=ffzzqq] (10.363791539718024,0.18524307247325034)-- (8.758877888902111,0.18524307247325034);
+\draw [line width=2.pt,color=ffzzqq] (8.758877888902111,0.18524307247325034)-- (8.758877888902111,1.0135856019266232);
+\draw [line width=2.pt,color=ffzzqq] (8.718004812390424,-0.5927331001421212)-- (10.322918463206337,-0.5927331001421212);
+\draw [line width=2.pt,color=ffzzqq] (10.322918463206337,-0.5927331001421212)-- (10.322918463206337,-1.421075629595494);
+\draw [line width=2.pt,color=ffzzqq] (10.322918463206337,-1.421075629595494)-- (8.718004812390424,-1.421075629595494);
+\draw [line width=2.pt,color=ffzzqq] (8.718004812390424,-1.421075629595494)-- (8.718004812390424,-0.5927331001421212);
+\draw (9.366713916067694,0.3895181077369117) node[anchor=north west] {$\vdots$};
+\draw (9.248671543357034,2.152815827179788) node[anchor=north west] {$H$};
+\draw (6.356633411945894,0.3895181077369117) node[anchor=north west] {$\vdots$};
+\draw (9.248671543357034,0.944312877220389) node[anchor=north west] {$H$};
+\draw (9.248671543357034,-0.66527666174656557) node[anchor=north west] {$H$};
+\draw [line width=2.pt] (12.742240963545123,2.352882635736501)-- (13.247154614361039,2.352882635736501);
+\draw [line width=2.pt] (13.247154614361039,2.352882635736501)-- (13.247154614361039,-1.4754598937168613);
+\draw [line width=2.pt] (13.247154614361039,-1.4754598937168613)-- (12.742240963545123,-1.4754598937168613);
+\draw [line width=2.pt] (12.742240963545123,-1.4754598937168613)-- (12.742240963545123,2.352882635736501);
+\draw (8.097758409428112,2.524426734481017) node[anchor=north west] {$A_0$};
+\draw (8.127269002605775,1.3274967394026374) node[anchor=north west] {$A_1$};
+\draw (8.127269002605775,-0.0716153809116045) node[anchor=north west] {$A_{n-1}$};
+\draw (12.701410945143804,1.1037885589267157) node[anchor=north west] {\huge${||}$};
+\draw (-1.6112267460235754,-0.35261711785799033) node[anchor=north west] {$\textrm{File}\,\, F$};
+\draw [line width=2.pt,color=qqzzff] (14.099803567248562,0.8880549125817581)-- (16.404717218064505,0.8880549125817581);
+\draw [line width=2.pt,color=qqzzff] (16.404717218064505,0.8880549125817581)-- (16.404717218064505,0.05971238312838523);
+\draw [line width=2.pt,color=qqzzff] (16.404717218064505,0.05971238312838523)-- (14.099803567248562,0.05971238312838523);
+\draw [line width=2.pt,color=qqzzff] (14.099803567248562,0.05971238312838523)-- (14.099803567248562,0.8880549125817581);
+\draw (14.065472383560034,0.7137506065065066) node[anchor=north west] {KZG Commit};
+\draw [line width=2.pt] (-1.757137164734643,1.4158566638357204)-- (-1.6987728137797875,1.468183323312486)-- (-0.8353829324131352,1.466170759486456)-- (-0.7911065282404861,1.4440325574001331)-- (-0.4731214437278277,1.1179972175833583)-- (-0.46104606077164956,1.0817710687148292)-- (-0.46411549876557334,-0.19677167547108)-- (-0.5092897728764969,-0.257004040952312)-- (-1.7049022276789376,-0.25399242267824995)-- (-1.7620790914452753,-0.18986681019888074);
+\draw [line width=2.pt] (-0.8353829324131352,1.466170759486456)-- (-0.8375561647492082,1.143398456486299)-- (-0.7863586540901606,1.0801544727310066)-- (-0.46104606077164956,1.0817710687148292)-- (-0.4731214437278277,1.1179972175833583)-- (-0.7911065282404861,1.4440325574001331);
+\draw [line width=2.pt] (-1.5730935591951942,1.1031592540250585)-- (-1.1382254455513623,1.1031592540250585);
+\draw [line width=2.pt] (-1.5702512839426204,0.8582032161437834)-- (-1.294550584442935,0.8582032161437834);
+\draw [line width=2.pt] (-1.5674090086900465,0.64503257220073)-- (-0.6493541021086218,0.6421902969481561);
+\draw [line width=2.pt] (-1.1865441248451214,0.8525186656386357)-- (-0.6436695516034723,0.8525186656386357);
+\draw [line width=2.pt] (-0.9250548016083053,0.42333510249995854)-- (-0.6436695516034723,0.42333510249995854);
+\draw [line width=2.pt] (-1.578778109700342,0.4347042035102522)-- (-1.0302189859535469,0.43186192825767833);
+\draw [line width=2.pt] (-1.5674090086900465,0.22153355956720056)-- (-0.6493541021086218,0.21584900906205284);
+\draw [line width=2.pt] (-0.9278970768608792,0.00552064037157507)-- (-0.6408272763508984,0.00552064037157507);
+\draw [line width=2.pt] (-1.757137164734643,1.4158566638357204)-- (-1.7620790914452753,-0.18986681019888074);
+\draw [->,line width=1.2pt] (-0.4427398226884476,0.6443777038342358) -- (0.6650403483010345,1.900490753524851);
+\draw [->,line width=1.2pt] (-0.4427398226884476,0.6443777038342358) -- (0.6650403483010345,0.6652261209508694);
+\draw [->,line width=1.2pt] (-0.4427398226884476,0.6443777038342358) -- (0.7180048123904461,-1.0069043648688094);
+\draw [->,line width=1.2pt] (2.269953999116951,1.8214542349795373) -- (2.9840182861914197,1.8219772023981164);
+\draw [->,line width=1.2pt] (2.269953999116951,0.6824832569811488) -- (2.9646934700423326,0.6830273361324082);
+\draw [->,line width=1.2pt] (2.322918463206361,-0.9914589379558745) -- (2.9840182861914197,-0.9816047853917738);
+\draw [->,line width=1.2pt] (4.588931937007336,1.8425163050775915) -- (5.418945120976323,1.8425163050775915);
+\draw [->,line width=1.2pt] (4.569607120858249,0.6250528876851487) -- (5.360970672529065,0.6241521358079796);
+\draw [->,line width=1.2pt] (4.588931937007336,-0.998231668838109) -- (5.360970672529065,-0.998231668838109);
+\draw [->,line width=1.2pt] (7.723858771792239,1.803866672779419) -- (8.745715532151925,1.8088148456479303);
+\draw [->,line width=1.2pt] (7.665884323344981,0.578042621438291) -- (8.758877888902111,0.5715533111303248);
+\draw [->,line width=1.2pt] (7.665884323344981,-0.9789068526890219) -- (8.718004812390424,-0.9789068526890219);
+\draw [->,line width=1.2pt] (10.350629182967838,1.8351395591483044) -- (12.742240963545123,1.8351395591483026);
+\draw [->,line width=1.2pt] (10.363791539718024,0.5847156678805128) -- (12.742240963545123,0.584715667880511);
+\draw [->,line width=1.2pt] (10.322918463206337,-0.9595820365399366) -- (12.742240963545123,-0.9552800718914014);
+\draw [line width=2.pt] (0.718791425238348,-3.5114097527777703)-- (2.323705076054254,-3.5114097527777703);
+\draw [line width=2.pt] (2.323705076054254,-3.5114097527777703)-- (2.323705076054254,-4.339752282231143);
+\draw [line width=2.pt] (2.323705076054254,-4.339752282231143)-- (0.718791425238348,-4.339752282231143);
+\draw [line width=2.pt] (0.718791425238348,-4.339752282231143)-- (0.718791425238348,-3.5114097527777703);
+\draw(-1.3516472915661355,-3.9312889331087435) circle (0.8257876327575664cm);
+\draw [rotate around={39.98584609827348:(-1.6387362409560138,-4.172064335406262)},color=ccffcc,fill=ccffcc,fill opacity=0.55] (-1.6387362409560138,-4.172064335406262) ellipse (0.4209857891167758cm and 0.19192752649100409cm);
+\draw [rotate around={-87.50012133744015:(-1.3205479483627034,-3.552947353841951)},color=ccffcc,fill=ccffcc,fill opacity=0.5] (-1.3205479483627034,-3.552947353841951) ellipse (0.4071361259806713cm and 0.17669855066785153cm);
+\draw [rotate around={-43.20217596951604:(-1.0418350441774817,-4.166115743049433)},color=ccffcc,fill=ccffcc,fill opacity=0.5] (-1.0418350441774817,-4.166115743049433) ellipse (0.4133921347367967cm and 0.20248823488347825cm);
+\draw(-1.383500194901587,-7.052873459983158) circle (0.8257876327575682cm);
+\draw [rotate around={39.985846098273385:(-1.6705891442914862,-7.293648862280692)},color=ccffcc,fill=ccffcc,fill opacity=0.55] (-1.6705891442914862,-7.293648862280692) ellipse (0.42098578911676676cm and 0.19192752649100034cm);
+\draw [rotate around={-87.50012133744228:(-1.3524008516981691,-6.674531880716382)},color=ccffcc,fill=ccffcc,fill opacity=0.5] (-1.3524008516981691,-6.674531880716382) ellipse (0.4071361259806343cm and 0.17669855066782242cm);
+\draw [rotate around={-43.20217596951334:(-1.0736879475129417,-7.287700269923865)},color=ccffcc,fill=ccffcc,fill opacity=0.5] (-1.0736879475129417,-7.287700269923865) ellipse (0.4133921347368415cm and 0.20248823488351209cm);
+\draw (-1.552205559668246,-4.886628917695585) node[anchor=north west] {$\vdots$};
+\draw (15.670512635620934,0.03580992726099008) node[anchor=north west] {$T$};
+\draw (-2.165353864155552,-2.37486620071352) node[anchor=north west] {$Farmers$};
+\draw (-0.46031361209465216,-2.993855516546383) node[anchor=north west] {$sk$};
+\draw (-0.4308030189169874,-3.435990742141285) node[anchor=north west] {$\large{pk}$};
+\draw [->] (0.14468004123469402,-3.862757891982654) -- (0.718791425238348,-3.8713403810010814);
+\draw (0.6676630809002593,-3.653893468966592) node[anchor=north west] {$\texttt{id} \,\,Gen$};
+\draw [line width=2.pt] (4.067221140513448,-3.20994488658799)-- (6.3721347913293815,-3.20994488658799);
+\draw [line width=2.pt] (6.3721347913293815,-3.20994488658799)-- (6.3721347913293815,-4.6382874160413605);
+\draw [line width=2.pt] (6.3721347913293815,-4.6382874160413605)-- (4.067221140513448,-4.6382874160413605);
+\draw [line width=2.pt] (4.067221140513448,-4.6382874160413605)-- (4.067221140513448,-3.20994488658799);
+\draw (4.497466041753017,-3.318088015315978) node[anchor=north west] {$\mathrm{Choosing}$};
+\draw (4.438444855397688,-3.830747559204553) node[anchor=north west] {$m \,\,\mathrm{from} \,\,n$};
+\draw [->,line width=1.2pt] (2.323705076054254,-3.9255810175044568) -- (4.067221140513448,-3.924116151314675);
+\draw [line width=1.2pt] (4.914588620718506,1.8425163050775915)-- (4.9200755693330835,0.6246539748059976);
+\draw [line width=1.2pt] (4.9200755693330835,0.6246539748059976)-- (4.914588620719098,-0.998231668838109);
+\draw [->,line width=1.2pt] (4.914588620719098,-0.998231668838109) -- (4.91458862071899,-3.20994488658799);
+\draw [line width=1.2pt] (8.083935756984307,1.8056102862072694)-- (8.093109316976628,0.5755061055407052);
+\draw [line width=1.2pt] (8.093109316976628,0.5755061055407052)-- (8.083742996686935,-0.9789068526890219);
+\draw [line width=1.2pt] (8.083742996686935,-0.9789068526890219)-- (8.083742996687723,-2.00163077182214);
+\draw [line width=1.2pt] (8.083742996687723,-2.00163077182214)-- (5.541640556071092,-2.00163077182214);
+\draw [->,line width=1.2pt] (5.541640556071092,-2.00163077182214) -- (5.5416405560710915,-3.20994488658799);
+\draw [line width=2.pt,color=dcrutc] (10.456149422292592,-2.1695557595211077)-- (11.161063073108538,-2.1695557595211077);
+\draw [line width=2.pt,color=dcrutc] (11.161063073108538,-2.1695557595211077)-- (11.161063073108538,-3.997898288974477);
+\draw [line width=2.pt,color=dcrutc] (11.161063073108538,-3.997898288974477)-- (10.456149422292592,-3.997898288974477);
+\draw [line width=2.pt,color=dcrutc] (10.456149422292592,-3.997898288974477)-- (10.456149422292592,-2.1695557595211077);
+\draw (10.635669422707275,-2.2390607470629058) node[anchor=north west] {$\rotatebox{270}{\footnotesize{KZG\, Proof}}$};
+\draw [line width=2.pt,color=dcrutc] (11.219002673448236,-2.188051617467356)-- (11.923916324264182,-2.188051617467356);
+\draw [line width=2.pt,color=dcrutc] (11.923916324264182,-2.188051617467356)-- (11.923916324264182,-4.016394146920725);
+\draw [line width=2.pt,color=dcrutc] (11.923916324264182,-4.016394146920725)-- (11.219002673448236,-4.016394146920725);
+\draw [line width=2.pt,color=dcrutc] (11.219002673448236,-4.016394146920725)-- (11.219002673448236,-2.188051617467356);
+\draw [line width=2.pt,color=dcrutc] (12.557843292172995,-2.171104267863247)-- (13.262756942988942,-2.171104267863247);
+\draw [line width=2.pt,color=dcrutc] (13.262756942988942,-2.171104267863247)-- (13.262756942988942,-3.999446797316616);
+\draw [line width=2.pt,color=dcrutc] (13.262756942988942,-3.999446797316616)-- (12.557843292172995,-3.999446797316616);
+\draw [line width=2.pt,color=dcrutc] (12.557843292172995,-3.999446797316616)-- (12.557843292172995,-2.171104267863247);
+\draw (11.993156708879852,-2.292768927538827) node[anchor=north west] {$\cdots$};
+\draw (11.432455438504222,-2.2390607470629058) node[anchor=north west] {$\rotatebox{270}{\footnotesize{KZG\, Proof}}$};
+\draw (12.73092153832147,-2.2390607470629058) node[anchor=north west] {$\rotatebox{270}{\footnotesize{KZG\, Proof}}$};
+\draw [shift={(10.731878967772666,-0.8955384492527699)},line width=1.2pt]  plot[domain=-1.590139330894294:1.5514533226954996,variable=\t]({1.*0.2248722100159012*cos(\t r)+0.*0.2248722100159012*sin(\t r)},{0.*0.2248722100159012*cos(\t r)+1.*0.2248722100159012*sin(\t r)});
+\draw [shift={(10.739409756709932,0.6105059301922924)},line width=1.2pt]  plot[domain=-1.5625703161724944:1.5790223374172987,variable=\t]({1.*0.2005699950464014*cos(\t r)+0.*0.2005699950464014*sin(\t r)},{0.*0.2005699950464014*cos(\t r)+1.*0.2005699950464014*sin(\t r)});
+\draw [shift={(11.424653656488621,-0.9508950963672769)},line width=1.2pt]  plot[domain=-1.6427801689606198:1.4988124846291733,variable=\t]({1.*0.20389622902873325*cos(\t r)+0.*0.20389622902873325*sin(\t r)},{0.*0.20389622902873325*cos(\t r)+1.*0.20389622902873325*sin(\t r)});
+\draw [line width=1.2pt] (10.741059629012518,0.4099427211177)-- (10.73622840061631,-0.6707083060971553);
+\draw [line width=1.2pt] (10.737759884407346,0.8110691392668848)-- (10.7284477331482,1.8351395591483042);
+\draw [line width=1.2pt] (11.439318218301674,-0.7475269011179488)-- (11.432812621046226,0.584715667880512);
+\draw [->,line width=1.2pt] (10.72752953492902,-1.1203685924083846) -- (10.737911132371794,-2.1695557595211077);
+\draw [->,line width=1.2pt] (11.409989094675568,-1.154263291616605) -- (11.422370868697564,-2.188051617467356);
+\draw [line width=1.2pt] (12.117212202466108,-1.7304731781563678)-- (12.117221975932841,-0.9563914613770921);
+\draw [line width=1.2pt] (12.117212202466108,-1.7304731781563678)-- (12.845948235442878,-1.7304731781563678);
+\draw [->,line width=1.2pt] (12.845948235442878,-1.7304731781563678) -- (12.857334321625657,-2.171104267863247);
+\draw [line width=2.pt] (10.407049543911524,-4.545281720780878)-- (13.31196319472746,-4.545281720780878);
+\draw [line width=2.pt] (13.31196319472746,-4.545281720780878)-- (13.31196319472746,-4.773624250234253);
+\draw [line width=2.pt] (13.31196319472746,-4.773624250234253)-- (10.407049543911524,-4.773624250234253);
+\draw [line width=2.pt] (10.407049543911524,-4.773624250234253)-- (10.407049543911524,-4.545281720780878);
+\draw [->] (10.78614413545985,-3.997898288974477) -- (10.789850228133698,-4.545281720780878);
+\draw [->] (12.89679028425521,-3.999446797316616) -- (12.894042938370596,-4.545281720780878);
+\draw [->] (11.54100231592634,-4.016394146920725) -- (11.544105500091865,-4.545281720780878);
+\draw [line width=1.2pt] (11.734066087103551,-5.485858517750604)-- (11.728942813032173,-4.773624250234253);
+\draw (13.586728740473745,-4.29711528356905) node[anchor=north west] {Concat};
+\draw (2.992425789692118,-3.193855516546383) node[anchor=north west] {$\texttt{id}$};
+\draw [line width=1.2pt] (11.734066087103551,-5.485858517750604)-- (9.897109404327585,-5.492784790268936);
+\draw [line width=1.2pt] (9.40563626580837,-6.0012052783922565)-- (15.472348846776628,-5.982714621646019);
+\draw [line width=1.2pt] (9.40563626580837,-6.0012052783922565)-- (9.40563626580837,-3.967523325898978);
+\draw [->,line width=1.2pt] (9.40563626580837,-3.967523325898978) -- (6.3721347913293815,-3.984470675503087);
+\draw (11.899730861123504,-4.950823464044971) node[anchor=north west] {$(\pi_0,\pi_1,\ldots,\pi_{n-1})$};
+\draw [->,line width=1.2pt] (6.117850442610861,-2.543945959153679) -- (6.1042318152870365,-3.20994488658799);
+\draw [line width=1.2pt] (6.117850442610861,-2.543945959153679)-- (9.897109404327585,-2.543945959153679);
+\draw [line width=1.2pt] (9.897109404327585,-2.543945959153679)-- (9.897109404327585,-5.492784790268936);
+\draw [line width=1.2pt] (4.840093381637474,-4.6382874160413605)-- (4.840093381637475,-5.443378839719823);
+\draw [rotate around={0.3951370425074505:(6.398167685017601,-6.269999299157492)},line width=1.2pt] (6.398167685017601,-6.269999299157492) ellipse (1.2418422928372648cm and 0.18010813509358264cm);
+\draw [line width=1.2pt] (5.156388895571184,-6.277038762322351)-- (5.14553759410949,-6.775559943446546);
+\draw [line width=1.2pt] (5.138059938569738,-7.239174586911266)-- (5.14553759410949,-6.775559943446546);
+\draw [line width=1.2pt] (7.636285359219043,-6.247754858205767)-- (7.6355968888474575,-6.775559943446546);
+\draw [line width=1.2pt] (7.6355968888474575,-7.239174586911266)-- (7.6355968888474575,-6.775559943446546);
+\draw [rotate around={0.39513704250753223:(6.39055361115457,-6.796673658889347)},line width=1.2pt] (6.39055361115457,-6.796673658889347) ellipse (1.2418422928371189cm and 0.18010813509355666cm);
+\draw [rotate around={0.4270686677848574:(6.389374180674065,-7.25634592812916)},line width=1.2pt] (6.389374180674065,-7.25634592812916) ellipse (1.247467142335559cm and 0.1761794829972632cm);
+\draw (6.563207564189547,-7.627867316383978) node[anchor=north west] {Storage};
+\draw [->,line width=1.2pt] (5.480821080884512,-4.6382874160413605) -- (5.497313687419389,-6.152111622452225);
+\draw [->,line width=1.2pt] (6.1042318152870365,-4.6382874160413605) -- (6.121877887913505,-6.096266814503579);
+\draw [line width=1.2pt] (4.840093381637475,-5.443378839719823)-- (0.9091423619326653,-5.429963663942398);
+\draw (1.8431927397834946,-5.6813857347588534) node[anchor=north west] {$\{\mathrm{Commit}(g_i^{\texttt{id}}(x)\}_{i=0}^{m-1}$};
+\draw (6.1336969710118815,-4.945580281108239) node[anchor=north west] {$\{\pi_i^{\texttt{id}}(x)\}_{i=0}^{m-1}$};
+\draw (0.48402536959061826,-4.6739693738070105) node[anchor=north west] {$F^{\texttt{id}}(x)=\{g_i^{\texttt{id}}(x)\}_{i=0}^{m-1}$};
+\draw [line width=2.pt] (0.008660190017908853,-6.43434762492424)-- (2.905765821324768,-6.43434762492424);
+\draw [line width=2.pt] (2.905765821324768,-6.43434762492424)-- (2.905765821324768,-8.262690154377612);
+\draw [line width=2.pt] (2.905765821324768,-8.262690154377612)-- (0.008660190017908853,-8.262690154377612);
+\draw [line width=2.pt] (0.008660190017908853,-8.262690154377612)-- (0.008660190017908853,-6.43434762492424);
+\draw [line width=2.pt] (0.12987894392951116,-11.161879027476715)-- (2.9369845752363686,-11.161879027476715);
+\draw [line width=2.pt] (2.9369845752363686,-11.161879027476715)-- (2.9369845752363686,-12.990221556930091);
+\draw [line width=2.pt] (2.9369845752363686,-12.990221556930091)-- (0.12987894392951116,-12.990221556930091);
+\draw [line width=2.pt] (0.12987894392951116,-12.990221556930091)-- (0.12987894392951116,-11.161879027476715);
+\draw [line width=2.pt,color=qqqqcc] (0.147195908774024,-9.32628075395817)-- (1.752109559589928,-9.32628075395817);
+\draw [line width=2.pt,color=qqqqcc] (1.752109559589928,-9.32628075395817)-- (1.752109559589928,-10.154623283411542);
+\draw [line width=2.pt,color=qqqqcc] (1.752109559589928,-10.154623283411542)-- (0.147195908774024,-10.154623283411542);
+\draw [line width=2.pt,color=qqqqcc] (0.147195908774024,-10.154623283411542)-- (0.147195908774024,-9.32628075395817);
+\draw (0.2725571491236124,-9.484835263882566) node[anchor=north west] {MASK};
+\draw (0.17087706510331247,-6.524607549361311) node[anchor=north west] {$F^{\texttt{id}}(\texttt{id}+0)$};
+\draw (0.17087706510331247,-7.633110499320711) node[anchor=north west] {$F^{\texttt{id}}(\texttt{id}+l-1)$};
+\draw (0.7791313013672653,-6.873072546900501) node[anchor=north west] {$\vdots$};
+\draw [->,line width=1.2pt] (0.9091423619326653,-5.429963663942398) -- (0.9122130056713385,-6.43434762492424);
+\draw [->,line width=1.2pt] (0.9122130056713385,-8.262690154377612) -- (0.9091423619326648,-9.32628075395817);
+\draw [->,line width=1.2pt] (0.9423802043201331,-10.155936367059587) -- (0.9437762916216945,-11.161879027476715);
+\draw (0.27087706510331247,-11.22914366749258) node[anchor=north west] {$\tilde{F}^{\texttt{id}}(\texttt{id}+0)$};
+\draw (0.27087706510331247,-12.278695254039326) node[anchor=north west] {$\tilde{F}^{\texttt{id}}(\texttt{id}+l-1)$};
+\draw (0.8381524877225947,-11.607084346738096) node[anchor=north west] {$\vdots$};
+\draw [line width=1.2pt] (2.9369845752363686,-12.062050292203403)-- (6.329352358265721,-12.062361199391471);
+\draw [->,line width=1.2pt] (6.329352358265721,-12.062361199391471) -- (6.335428311825565,-7.432759469007388);
+\draw (2.9071079943621767,-7.215207772495403) node[anchor=north west] {Storage Coins};
+\draw (3.06552907824094,-11.059705938206463) node[anchor=north west] {Masked Storage};
+\draw (3.56552907824094,-11.559705938206463) node[anchor=north west] {Coins};
+\draw [dash pattern=on 7pt off 7pt] (-2.3184831408875706,-2.243010366626785)-- (9.117383698232567,-2.209008202862692);
+\draw [dash pattern=on 7pt off 7pt] (9.117383698232567,-2.209008202862692)-- (9.100066733388052,-13.222597843973947);
+\draw [dash pattern=on 7pt off 7pt] (9.100066733388052,-13.222597843973947)-- (-2.329130063991557,-13.222597843973947);
+\draw [dash pattern=on 7pt off 7pt] (-2.329130063991557,-13.222597843973947)-- (-2.3184831408875706,-2.243010366626785);
+\draw (-2.171928016399205,-9.1900784468193) node[anchor=north west] {$\mathbf{\rotatebox{270}{\huge{Plotting}}}$};
+\draw [->] (13.247154614361039,0.51860659936446) -- (14.099803567248562,0.5236738738497664);
+\draw [line width=1.2pt] (15.45109180068545,0.05971238312838523)-- (15.472348846776628,-5.982714621646019);
+\draw [line width=2.pt,color=wwccqq] (-0.5024902877693558,-14.732608826535447)-- (-1.0960736538904081,-15.103598430361114);
+\draw [line width=2.pt,color=wwccqq] (-1.0960736538904081,-15.103598430361114)-- (-1.0715789154979827,-15.803151506598658);
+\draw [line width=2.pt,color=wwccqq] (-1.0715789154979827,-15.803151506598658)-- (-0.45350081098450445,-16.131714979010535);
+\draw [line width=2.pt,color=wwccqq] (-0.45350081098450445,-16.131714979010535)-- (0.14008255513654805,-15.760725375184869);
+\draw [line width=2.pt,color=wwccqq] (0.14008255513654805,-15.760725375184869)-- (0.11558781674412272,-15.061172298947325);
+\draw [line width=2.pt,color=wwccqq] (0.11558781674412272,-15.061172298947325)-- (-0.5024902877693558,-14.732608826535447);
+\draw [line width=2.pt] (-0.46225350351725947,-15.417811581828872)-- (-0.45350081098450445,-16.131714979010535);
+\draw [line width=2.pt] (0.11558781674412272,-15.061172298947325)-- (-0.46225350351725947,-15.417811581828872);
+\draw [line width=2.pt] (-1.0960736538904081,-15.103598430361114)-- (-0.46225350351725947,-15.417811581828872);
+\draw [line width=2.pt,color=wwccqq] (2.7587997933661246,-14.739901776026734)-- (2.165216427245082,-15.1108913798524);
+\draw [line width=2.pt,color=wwccqq] (2.165216427245082,-15.1108913798524)-- (2.1897111656375126,-15.810444456089936);
+\draw [line width=2.pt,color=wwccqq] (2.1897111656375126,-15.810444456089936)-- (2.8077892701509857,-16.139007928501805);
+\draw [line width=2.pt,color=wwccqq] (2.8077892701509857,-16.139007928501805)-- (3.401372636272028,-15.768018324676138);
+\draw [line width=2.pt,color=wwccqq] (3.401372636272028,-15.768018324676138)-- (3.3768778978795977,-15.068465248438603);
+\draw [line width=2.pt,color=wwccqq] (3.3768778978795977,-15.068465248438603)-- (2.7587997933661246,-14.739901776026734);
+\draw [line width=2.pt] (2.7990365776182227,-15.425104531320162)-- (2.8077892701509857,-16.139007928501805);
+\draw [line width=2.pt] (3.3768778978795977,-15.068465248438603)-- (2.7990365776182227,-15.425104531320162);
+\draw [line width=2.pt] (2.165216427245082,-15.1108913798524)-- (2.7990365776182227,-15.425104531320162);
+\draw [line width=2.pt,color=wwccqq] (6.8818880632113295,-14.610078361458243)-- (6.288304697090288,-14.98106796528391);
+\draw [line width=2.pt,color=wwccqq] (6.288304697090288,-14.98106796528391)-- (6.312799435482719,-15.680621041521444);
+\draw [line width=2.pt,color=wwccqq] (6.312799435482719,-15.680621041521444)-- (6.930877539996192,-16.009184513933313);
+\draw [line width=2.pt,color=wwccqq] (6.930877539996192,-16.009184513933313)-- (7.524460906117234,-15.638194910107647);
+\draw [line width=2.pt,color=wwccqq] (7.524460906117234,-15.638194910107647)-- (7.4999661677248035,-14.938641833870111);
+\draw [line width=2.pt,color=wwccqq] (7.4999661677248035,-14.938641833870111)-- (6.8818880632113295,-14.610078361458243);
+\draw [line width=2.pt] (6.922124847463428,-15.295281116751667)-- (6.930877539996192,-16.009184513933313);
+\draw [line width=2.pt] (7.4999661677248035,-14.938641833870111)-- (6.922124847463428,-15.295281116751667);
+\draw [line width=2.pt] (6.288304697090288,-14.98106796528391)-- (6.922124847463428,-15.295281116751667);
+\draw [rotate around={-1.7357045889282945:(0.7967117976492252,-15.424084707107058)},line width=2.pt] (0.7967117976492252,-15.424084707107058) ellipse (0.37660499237995737cm and 0.1559970026432568cm);
+\draw [rotate around={-1.735704588928295:(1.6141893574682438,-15.414288415682424)},line width=2.pt] (1.6141893574682438,-15.414288415682424) ellipse (0.3766049923799657cm and 0.15599700264325742cm);
+\draw [line width=2.pt] (0.9043602792450214,-15.426161191923018)-- (1.4792178444310435,-15.413702283027277);
+\draw [rotate around={-1.7357045889285956:(3.954940161897829,-15.488537737509448)},line width=2.pt] (3.954940161897829,-15.488537737509448) ellipse (0.376604992380349cm and 0.15599700264341798cm);
+\draw [rotate around={-1.735704588928596:(4.772417721716719,-15.47874144608481)},line width=2.pt] (4.772417721716719,-15.47874144608481) ellipse (0.3766049923799701cm and 0.15599700264325805cm);
+\draw [line width=2.pt] (4.062588643493532,-15.490614222325402)-- (4.637446208679551,-15.47815531342966);
+\draw [line width=2.pt] (10.512485726572443,-14.431068034658)-- (15.3195913578793,-14.431068034658);
+\draw [line width=2.pt] (15.3195913578793,-14.431068034658)-- (15.3195913578793,-16.259410564111377);
+\draw [line width=2.pt] (15.3195913578793,-16.259410564111377)-- (10.512485726572443,-16.259410564111377);
+\draw [line width=2.pt] (10.512485726572443,-16.259410564111377)-- (10.512485726572443,-14.431068034658);
+\draw [->,line width=1.2pt] (10.512485726572443,-15.375765630046162) -- (7.515276804786475,-15.375903219725872);
+\draw [->,line width=1.2pt] (12.16849885849944,-18.129954592421402) -- (12.16274693346384,-16.259410564111377);
+\draw [line width=2.pt] (0.9676011334750672,-12.949511714742727)-- (0.9599720716506476,-13.585706836181355);
+\draw [line width=1.2pt] (12.087593087927958,-13.633187038880157)-- (0.9599720716506476,-13.585706836181355);
+\draw [->,line width=1.2pt] (12.087593087927958,-13.633187038880157) -- (12.093549454253832,-14.431068034658);
+\draw (-2.348991575465193,-14.670382066180974) node[anchor=north west] {$\mathbf{\rotatebox{270}{\huge{Farming}}}$};
+\draw [dash pattern=on 7pt off 7pt] (-2.3949156311918123,-19.967829269453112)-- (-2.3842687080878284,-13.988241792105951);
+\draw [dash pattern=on 7pt off 7pt] (15.530539693513044,-19.88337610457736)-- (15.540623562569204,-14.004480444837371);
+\draw [dash pattern=on 7pt off 7pt] (-2.3842687080878284,-13.988241792105951)-- (15.540623562569204,-14.004480444837371);
+\draw [dash pattern=on 7pt off 7pt] (-2.3949156311918123,-19.967829269453112)-- (15.530539693513044,-19.88337610457736);
+\draw (0.8415126557631945,-16.224280008757942) node[anchor=north west] {Blockchain};
+\draw (5.5303368029712825,-16.50004750998835) node[anchor=north west] {Winner allowed to };
+\draw (10.488116456818952,-19.123383181851434) node[anchor=north west] {Global Challenge };
+\draw (11.845603742991528,-18.33278295871734) node[anchor=north west] {$C_t$};
+\draw (11.16686009990524,-14.790457971021391) node[anchor=north west] { \large    Check the };
+\draw (5.235230871194635,-17.03060978070223) node[anchor=north west] {produce a new block at time slot $t$};
+\draw (10.98979654083925,-15.37997160514793) node[anchor=north west] {\large winning conditions};
+\draw (5.289357989326611,-15.267312061259353) node[anchor=north west] {$\cdots$};
+\end{tikzpicture}
+\end{addmargin}
+\end{figure*}
+
+\begin{thebibliography}{9}
+
+\bibitem{beyond_hellman}
+Abusalah H., Alwen J., Cohen B., Khilko D., Pietrzak K., and Reyzin L.
+\emph{Beyond Hellman’s Time-Memory Trade-Offs with Applications to Proofs of Space}
+Advances in Cryptology – ASIACRYPT 2017.
+
+\bibitem{blockchain_resources}
+Azouvi S., Cachin C., V. Le Duc, Vukolic M., and Zanolini L.
+\emph{Modeling Resources in Permissionless Longest-chain Total-order Broadcast}
+arXiv:2211.12050 [cs.CR],
+https://doi.org/10.48550/arXiv.2211.12050.
+
+\bibitem{spacemesh}
+Bentov I., Loss J., Moran T., and Shani B.
+\emph{The Spacemesh Protocol: Tortoise and Hare Consensus… In… Space}
+https://spacemesh.io/blog/spacemesh-protocol-v1.0/,
+https://drive.google.com/file/d/18I9GPebWqgpvusI1kMnAB9nayBbL-1qN/view.
+
+\bibitem{chia}
+Cohen B., and Pietrzak K.
+\emph{The Chia Network Blockchain}
+https://docs.chia.net/green-paper-abstract/,
+https://docs.chia.net/assets/files/Precursor-ChiaGreenPaper-82cb50060c575f3f71444a4b7430fb9d.pdf.
+
+\bibitem{blockchain_capacity}
+Kiffer L., Neu J., Sridhar S., Zohar A., Tse D.
+\emph{Security of Blockchains at Capacity}
+Cryptology ePrint Archive, Paper 2023/381,
+https://eprint.iacr.org/2023/381.
+
+\bibitem{spacemint}
+Park S., Kwon A., Fuchsbauer G., Ga\u{z}i P., Alwen J., and Pietrzak K.
+\emph{SpaceMint: A Cryptocurrency Based on Proofs of Space}
+Cryptology ePrint Archive, Paper 2015/528,
+https://eprint.iacr.org/2015/528.
+
+\bibitem{proof_of_replication_BFisch}
+Fisch B. \emph{PoReps: Proofs of Space on Useful Data} Cryptology ePrint Archive, Paper 2018/678, 2018. [Online]. Available: https://eprint.iacr.org/2018/678.
+
+\bibitem{KZG_paper}
+Kate A., Zaverucha G., and Goldberg I.  \emph{Polynomial commitments} Technical report, 2010. CACR 2010-10, Centre for Applied Cryptographic Research, University of Waterloo.
+\bibitem{erasure}
+Li J. and Li  B. \emph{Erasure coding for cloud storage systems: A survey} in Tsinghua Science and Technology, vol. 18, no. 3, pp. 259-272, June 2013.
+
+
+
+\end{thebibliography}
 
 \end{document}
 
