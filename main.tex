@@ -23,24 +23,27 @@
 \usepackage{pgf,tikz}
 \usepackage{scrextend}
 \usepackage{mathrsfs}
+\usepackage{cite}
 \usetikzlibrary{arrows}
 
-\title{(WIP) Dilithium: A Proof-of-Storage Consensus Protocol for Subspace}
+\title{(WIP) Dilithium: A Proof-of-Archival-Storage Consensus Protocol for Subspace}
 \author{Chen Feng$^{1,}$$^{ 2}$, Dariia Porechna$^{1}$, Barak Shani$^{1,}$$^{ 3}$, and Jeremiah Wagstaff$^{1}$\\
 $^1$Subspace Labs\\
 $^2$University of British Columbia\\
 $^3$Matter Labs
 \thanks{The authors are listed in alphabetical order.}}
 
+\IEEEoverridecommandlockouts % using \thanks{}
+
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-    Dilithium is a new proof-of-storage consensus protocol designed to provide superior
+    Dilithium is a new proof-of-archival-storage consensus protocol designed to provide superior
     user experience while maintaining the highest level 
     of consensus security among existing protocols.
-    Dilithium combines KZG polynomial commitment, erasure coding, and Chia proof-of-space
+    Dilithium combines KZG polynomial commitment, erasure coding, and function inverting
     in a unique way to achieve unprecedented efficiency. 
     In this paper, we present the fundamental construction of Dilithium
     and outline its security proofs. We also present our initial implementation results to demonstrate the protocol's practicality.
@@ -49,37 +52,34 @@ $^3$Matter Labs
 
 \section{Introduction}
 
-\textit{Proof-of-storage} is an intriguing alternative to proof-of-work for blockchain leader-election. 
-Instead of relying on energy-intensive computation, proof-of-storage leverages disk space as the underlying resource, 
-thereby minimizing energy consumption. Since disk space is an external and widely distributed resource, 
-proof-of-storage enjoys unique advantages over proof-of-stake by avoiding certain complexities of proof-of-stake design~\cite{blockchain_resources}.
-
-Prior research in this area includes the proof-of-space protocol introduced in the Spacemint paper~\cite{spacemint}, the proof-of-space-and-time protocol 
-implemented in Chia~\cite{chia}, and the proof-of-space-time protocol utilized by Spacemesh~\cite{spacemesh}.
-These constructions fill disk space with cryptographic data - chunks of bytes that are 
-reserved exclusively for proving the ownership of data. 
-In contrast, Filecoin relies on a proof-of-replication mechanism  \cite{proof_of_replication_BFisch}, bla bla. For further exploration of related works, please refer to Seciton 1.2 of the Spacemint paper~\cite{spacemint}.
-
-%Previous proof-of-storage constructions include the work in the proof-of-space Spacemint paper, the proof-of-space-and-time protocol Chia and the proof-of-space-time protocol Spacemesh. These constructions fill the disk space with "cryptographic data", basically chunks of bytes that cannot be used elsewhere besides for the proving protocol, to guarantee the uniqueness of data between different farmers. Filecoin, on the other hand, is a blockchain based on proof-of-replication. In Filecoin, the aim is to store several copies of a file. For other related works, see Section 1.2 in Spacemint.
-
-Say a few words on the Subspace previous (secure) protocol, and the reason to construct a new one.
-
-[On my end, I would like to emphasize the following after your story.]
+\textit{Proof-of-capacity}\footnote{We use proof-of-capacity as an abstract umbrella term, capturing proof-of-space, proof-of-storage, proof-of-replication, proof-of-space-time, proof-of-retrievability, and so on.} has emerged as an intriguing alternative to proof-of-work leader-election mechanisms. 
+Unlike proof-of-work (which relies on energy-intensive computation), 
+proof-of-capacity leverages disk space as the underlying resource,
+thereby minimizing energy consumption. 
+One of the unique advantages of proof-of-capacity over other blockchain leader-election mechanisms, such as proof-of-stake, is that it leverages an external and widely distributed resource. As a result, proof-of-capacity is more egalitarian, since it enables anyone to participate in the consensus process, regardless of their computational power or wealth.
+In addition, proof-of-capacity avoids 
+certain design complexities associated with proof-of-stake~\cite{blockchain_resources}, making it a compelling alternative for blockchain design.
 
 
-Chia is fast but for useless data. Filecoin is slow but for usefull data. Can we have the best of both worlds?
-
-In terms of user experience, we would like to optimize the following metrics
+Broadly, proof-of-capacity protocols can be divided into two categories
 \begin{itemize}
-    \item initialization (or setup) time: a few hours to days (depending on the disk space)
-    \item proof-generation time: less than one second
-    \item proof size: less than 500 Bytes
-    \item verification time: much less than one second, ideally in milliseconds
+    \item Proof-of-(useless)-space: Prior constructions include Spacemint~\cite{spacemint} (which is based on ``graph pebbling''~\cite{proof_of_space, pose}), Chia~\cite{chia} (which is based on inverting ``random'' functions~\cite{proof_of_space, beyond_hellman}), Spacemesh~\cite{spacemesh} (which is based on incompressible proof-of-work~\cite{post}). These constructions fill disk space with cryptographic data - chunks of bytes that are reserved exclusively for proving the ownership of data. 
+    \item Proof-of-(useful)-storage: As a particular example, Filecoin~\cite{filecoin} relies on a proof-of-replication mechanism~\cite{proof_of_replication_BFisch} to store several copies of a file. Their construction is also based on graph-pebbling games, moreover for efficiency they also rely on zkSNARKs. As another example, Subspace whitepaper~\cite{subspacev1} proposes to use disk space to store the blockchain history. The original construction is based on a computation-bound function called SLOTH.
 \end{itemize}
-At the same time, we aim to achieve the highest level of {consensus security} among existing Proof-of-Storage protocols. 
-%We aim to achieve the following objectives
+For further exploration of related works in this area, please refer to Section~1.2 of the Spacemint paper~\cite{spacemint} and Section~1 of the proof-of-replication paper~\cite{proof_of_replication_BFisch}.
 
-The (relative) small proof size prevents us from using graph-labeling-based constructions (such as those with depth robust graphs used in Filecoin), encouraging us to develop new innovations. We propose to combine three ingredients, namely, polynomial commitment (with constant-size proof size) \cite{KZG_paper}, erasure coding \cite{erasure}, and function inverting~\cite{beyond_hellman}, to address our design challenge. 
+Despite a large variety of existing protocols, 
+we believe that an ideal proof-of-capacity protocol should not only store useful data (in particular blockchain history) but also provide a superior
+user experience while maintaining the highest level of consensus security among existing protocols.
+In terms of user experience, the following performance metrics are most relevant 
+\begin{itemize}
+    \item Initialization (or setup) time: a few hours to days (depending on the amount of disk space)
+    \item Proof-generation time: less than one second
+    \item Proof size: hundreds of Bytes
+    \item Verification time: much less than one second, ideally in the order of milliseconds
+\end{itemize}
+
+However, these goals cannot be achieved with prior constructions including the original Subpsace protocol. This has motivated us to design a new protocol that combines three ingredients, namely, KZG polynomial commitment  \cite{KZG_paper}, erasure coding \cite{erasure}, and function inverting~\cite{beyond_hellman} in a unique way in order to address the above design challenges. 
 
 \section{Building Blocks of Dilithium}
 
@@ -129,7 +129,7 @@ We consider the following two cases.
 \subsection{Creating Random Challenges}
 
 We start with a high-level overview. At each time slot (say, one second), every farmer observes some global randomness (also referred to as the global challenge). 
-Based on this global challenge, each farmer determines exactly one storage coin (out of $\ell$ storage coins) to scan. Since a storage coin contains $m$ elements in $\Fp$, this gives a farmer $m$ ``tickets'' to win the lottery. A ticket is called a winning ticket if it is close enough to the global challenge in terms of the Hamming distance.
+Based on this global challenge, each farmer determines exactly one storage coin (out of $\ell$ storage coins) to scan. Since a storage coin contains $m$ elements in $\Fp$, this gives a farmer $m$ ``tickets'' to win the lottery. A ticket is called a winning ticket if it is ``close enough'' to the global challenge (in terms of the Hamming distance or some other distance).
 
 More formally, let $\mathcal{C}_t$ be the global challenge at time slot $t$. Then, each farmer computes
 \[
@@ -147,7 +147,7 @@ Alternatively, if $\mathcal{C}_t$ and $\id$ share the same domain, each farmer c
 \]
 to decide which storage coin to scan, since $\oplus$ operation is easier than $H(\cdot)$ operation. 
 Once a farmer finds a winning ticket, it can produce a new block.
-Clearly, this leader-election mechanism is in spirit similar to Proof-of-Work (one CPU, one vote) and Proof-of-Stake (one coin, one vote).
+Clearly, this leader-election mechanism is in spirit similar to proof-of-work (one CPU, one vote) and proof-of-stake (one coin, one vote).
 
 In the above construction, anyone in the system can figure out whether a particular farmer has a winning ticket, because all the operations depend on the farmer's public key $\pk$ (through $\id$) but not on the secret key $\sk$.  
 The construction can be made privacy-preserving as follows. 
@@ -200,7 +200,7 @@ With a given $\id$, the farmer selects $m$ polynomials $\{g_i^{\id}(x) \}_{i = 0
 together with the proofs with respect to $T$. Then, the farmer creates $\ell$ storage coins 
 $\{ F^{\id}(\id + j) \}_{j = 0}^{\ell - 1}$ and generates their masked versions by using the function $\mask_{\seed}(\cdot)$ as described before.
 Finally, the farmer stores $\ell$ masked storage coins as well as some metadata (i.e., $m$ commitments $\{\cmt\left(g_i^{\id}(x) \right \}_{i = 0}^{m - 1}$ together with their proofs).
-This process is often called {\bf plotting} in the Proof-of-Storage literature.
+This process is often called {\bf plotting} in the literature.
 
 Recall that a global challenge $\mathcal{C}_t$ is generated at time slot $t$, based on which each farmer selects one masked storage coin and collects $m$ lottery tickets from it. If a farmer finds a winning ticket, it has to prove the following
 \begin{itemize}
@@ -209,7 +209,8 @@ Recall that a global challenge $\mathcal{C}_t$ is generated at time slot $t$, ba
 \end{itemize}
 This process is called {\bf farming} in the literature. 
 
-The above construction provides a leader-election mechanism, which can be combined with some longest-chain protocol to produce a consensus algorithm.
+The above construction provides a new leader-election mechanism, which can be combined with some longest-chain protocol to produce a consensus algorithm.
+A diagram of the above construction will be provided at the end of this paper to better illustrate the interaction of different building blocks.
 
 % \subsection{Advantages of Our Construction}
 
@@ -229,7 +230,7 @@ The above construction provides a leader-election mechanism, which can be combin
 
 \section{Extensions}
 
-Our basic construction assumes that $\func_{\seed}(\cdot)$ is surjective. In this section, we explain how to relax this assumption through two examples.
+Our basic construction assumes that $\func_{\seed}(\cdot)$ is surjective. In this section, we explain how to relax this assumption with erasure coding through two examples.
 
 % relies on an ``ideal'' function $\mask(\cdot)$ that has three properties. The first two properties are easy to achieve, but not the third one. Indeed, we don't have a concrete example of $\mask(\cdot)$ at the time of writing. Instead, we have a weaker version of $\mask(\cdot)$ in which the third property is relaxed. In this version, $\seed$ and $k$ determine a random function $h(\cdot)$ that requires a significant amount 
 % of space to invert, and the output of $\mask(\cdot)$ is a pre-image of $\ind$ under $h$. Since the pre-image (of $\ind$ under $h$) can be empty or a set with multiple elements, the output of $\mask(\cdot)$ is not always a single value. We would like to show that this is not an issue.
@@ -360,25 +361,21 @@ On the other hand, on-the-fly computing corresponds to the other extreme case wh
 
 In this section, we conduct an initial security analysis based on the previous space-time lower bound.
 Our key observation is twofold. First, the previous lower bounds capture the amount of resources one needs 
-to have in order to emulate storage coins. Second, our previous Proof-of-Storage construction can be analyzed
+to have in order to emulate storage coins. Second, our new construction can be analyzed
 by using the general framework proposed by Kiffer, Neu, Sridhar, Zohar, and Tse~\cite{blockchain_capacity}.
 
 \subsection{System Model}
 
-%On Explicit Constructions of Extremely Depth Robust Graphs
-%ZigZag horizontal DRG + vertical DRG
-%Temporary Block Withholding Attacks on Filecoin's Expected Consensus
-
-The protocol proceeds in slots of duration $\tau$ as explained before. For simplicity, we consider a fixed set of $N$ farmers with equal capability. We
+The protocol proceeds in slots of duration $\tau$. For simplicity, we consider a fixed set of $N$ farmers with equal capability. We
 are particularly interested in the large system regime $N \to \infty$. In each slot, each farmer can win the lottery with probability $\rho / N$,
-independently of other farmers and slots, where $\rho$ is a system parameter. When a malicious farmer wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. Note that equivocations never happen in proof-of-work protocols but can appear in our construction as explained in~\cite{blockchain_capacity}. 
-A malicious farmer can emulate storage by launching Hellman attacks (as explained in~\cite{beyond_hellman}) or it can simply follow our proof-of-storage construction but deviate from the longest-chain protocol.
-We assume that the fraction of malicious farmers is at most $\beta < \frac{1}{2}$. That is, $\beta$ can be viewed as a security threshold indicating the maximum fraction of malicious farmers a system can tolerate.
+independently of other farmers and slots, where $\rho$ is a system parameter. When a malicious farmer wins the lottery at slot $t$, it can create multiple blocks, which is a behavior called equivocations. Note that equivocations never happen in proof-of-work protocols (when $\tau \to 0$) but can appear in our construction as explained in~\cite{blockchain_capacity}. 
+A malicious farmer can emulate storage by launching Hellman attacks (as explained in~\cite{beyond_hellman}) or it can simply follow our proof-of-archival-storage construction but deviate from the longest-chain protocol (say, launching nothing-at-stake attacks).
+We assume that the fraction of malicious farmers is at most $\beta$. Here, $\beta$ can be viewed as a security threshold indicating the maximum fraction of malicious farmers a system can tolerate.
 
 \subsection{Emulating Storage Coins}
 
 The previous lower bound \eqref{eq:general_bound} suggests the following. In order to emulate $L$ storage coins of a farmer (i.e., emulating a farmer ID), one needs $mS$
-amount of space and makes at most $mT$ oracle queries with $S^q \cdot T \in \Omega\left(L^q \right)$. 
+amount of space and makes at most $mT$ oracle queries with $S^q \cdot T \in \Omega\left(L^q \right)$ (where $m$ is the number of pieces a farmer stores as defined before). 
 This allows us to compare our construction with Chia, since the lower bound \eqref{eq:general_bound} applies to both.
 Using our notation, the parameter setup in Chia can be described as $k = 32$, $L = 2^{32}$, $m = 1$, and $q = 7$. 
 In our setup, we can choose $k = 22$, $L = 2^{22}$, $m = 2^{10}$, and $q = 10$ to conduct a fair comparison, 
@@ -392,53 +389,63 @@ This implies that our construction is comparable to Chia (under appropriate para
 
 Next, we would like to point out that  our construction enjoys efficient plotting. With a relatively small $k$, all the plotting operations in our construction can be done in memory, thereby eliminating the so-called ``sort on disk'' operation---the bottleneck of the Chia plotting algorithm. This enables us to achieve significantly shorter initialization time than Chia.
 
-Finally, we would like to comment on the memory access. It is well known that Hellman attacks require a large amount of memory access. (To be continued.) 
+Finally, we would like to comment on the memory access. It is well known that Hellman attacks require a large amount of memory access. How can we derive a tight lower bound on the memory access? We aim to answer this question for Hellman attacks as well as other similar attacks (e.g., the one based on rainbow tables) as our future work. We believe that a lower bound on memory access better captures the ``hardness'' of emulating storage in our setup.
 
 \subsection{Consensus Security}
 
-We notice that our proof-of-storage construction is compatible with the general framework proposed in~\cite{blockchain_capacity}\footnote{Indeed, we have confirmed this with one of the authors.}. This allows us to apply the Theorem~2 of~\cite{blockchain_capacity} to our construction, obtaining the following security result.
-For all $\beta < \frac{1}{2}$ and system parameters $\rho, \tau$ satisfying the condition (16) in~\cite{blockchain_capacity}, our proof-of-storage longest-chain consensus protocol with equivocation removal is secure. By investigating condition (16), we notice that we can achieve a higher security threshold $\beta$ than Chia due to our new lottery design and the use of equivocation removal. An in-depth discussion will be provided in a more elaborated version of this work.
+We notice that our proof-of-storage construction is compatible with the general framework proposed in~\cite{blockchain_capacity}\footnote{Indeed, we have confirmed this with one of the authors of the paper.}. This allows us to apply the Theorem~2 of~\cite{blockchain_capacity} to our construction, obtaining the following security result.
+For all $\beta < \frac{1}{2}$ and system parameters $\rho, \tau$ satisfying the condition (16) in~\cite{blockchain_capacity}, our proof-of-storage longest-chain consensus protocol with equivocation removal is secure. By investigating condition (16), we notice that we can achieve a higher security threshold $\beta$ than Chia due to our new lottery design and the use of equivocation removal. We will provide an in-depth discussion  in a more elaborated version of this work.
 
 \subsection{Discussion}
 
-The analysis above shows that in order to participate in the consensus protocol, a farmer can choose between different resources, namely storage $S$ or oracle queries $T$ that capture the amount of compute needed in order to participate in the lottery. Note that with a correct choice of function $\func$, the latter also requires a substantial amount of memory access.
+The analysis above shows that in order to participate in the consensus protocol, a farmer can choose between different resources, namely storage $S$ or oracle queries $T$ that capture the amount of computation needed in order to participate in the lottery. Note that with a correct choice of function $\func$, the latter also requires a substantial amount of memory access.
 
-We now turn to discuss how we design the system such that rational farmers always prefer to allocate the storage resource to the system, rather than compute of a combination of both. This makes sure that the protocol does not degrade into proof of work, as well as ease the analysis as it allows us to focus on a single resource, namely storage. The full version will give a rigorous justification.
+We now turn to discuss how we design the system such that rational farmers always prefer to allocate the storage resource to the system, rather than the computation resource or a combination of both. This not only ensures that the protocol does not degrade into proof-of-work, but also eases the analysis as it allows us to focus on a single resource, namely storage. The full version of this work will give a rigorous justification.
 
-First we reiterate that since the $\mask_{\seed}(\cdot)$ function depends on the farmer ID, creating any $2$ different plots requires running the function twice as many, thus expending the resources needed to run $\mask_{\seed}(\cdot)$. Moreover, notice that the seed depends also on the particular position $j$ in the column vector $F^{\id}$ (that is, on $g_i^{\id}(x)$), thus even for a fixed $\id$, any change to the plot requires expending the resources needed to run $\mask_{\seed}(\cdot)$.\footnote{We explain that even though the presentation above assumes the entire selected pieces $d_i$ of $F$ are stored in one plot, in practice we divide them into several \emph{sectors}, each with its own \emph{sector id}, and so a farmer could try many sector id's. The comment above explains that for each of these attempts, the farmer would have to pay the cost of running $\mask_{\seed}$. The plotting protocol is still deterministic, as describes above, so one could not create $2$ different sectors with the same farmer id and sector id.}
+First we reiterate that since the $\mask_{\seed}(\cdot)$ function depends on the farmer ID, creating any $2$ different plots requires running the function twice as many, thus expending the resources needed to run $\mask_{\seed}(\cdot)$. Moreover, notice that the seed depends also on the particular position $j$ in the column vector $F^{\id}$ (that is, on $g_i^{\id}(x)$), thus even for a fixed $\id$, any change to the plot requires expending the resources needed to run $\mask_{\seed}(\cdot)$.\footnote{We explain that even though the presentation above assumes the $m$ selected pieces $d_i$ of $F$ are stored in one plot, in practice we divide them into several \emph{sectors}, each with its own \emph{sector id}, and so a farmer could try many sector id's. The comment above explains that for each of these attempts, the farmer would have to pay the cost of running $\mask_{\seed}$. The plotting protocol is still deterministic, as describes above, so one could not create $2$ different sectors with the same farmer id and sector id.}
 
 Secondly, recall that the function $\mask_{\seed}$ is parameterized by a ``difficulty'' parameter $k$. We can therefore set $k$ high enough such that creating plots ``on the fly'' is not profitable, compared to creating a single plot and storing it, which requires running $\mask_{\seed}$ only once.
 
-In more detail, we measure the cost of storing a single piece of (masked) information $d_i$ in between challenges $\mathcal{C}_t$.\footnote{We do not discuss here the methods of cost measuring, but we highlight that one can think of the alternative cost a farmer with, say, 100GB free has for some period of time, given the market for storage. We can then derive the corresponding values for the size of any $d_i$ and the challenge slot duration. We remark that this cost should also take into account the operational cost, like electricity.}\footnote{We would like also to consider the cost of obtaining the storage device in first place, assuming the farmer did not have free space -- the reason is to explain that the ``attacker'' may use their funds to buy storage. This should be a negligible cost in the long run, and we do not discuss it here. This is also the case for running $\mask_{\seed}$.} A single piece $d_i$ gives some amount $c$ (e.g. $c=1$) of lottery tickets per challenge $\mathcal{C}_t$.
+In more detail, we measure the cost of storing a single piece of (masked) information $d_i$ in between challenges $\mathcal{C}_t$.\footnote{We do not discuss here the methods of cost measuring, but we highlight that one can think of the alternative cost a farmer with, say, 100GB has for some period of time, given the market for storage. We can then derive the corresponding values for the size of any $d_i$ and the challenge slot duration. We remark that this cost should also take into account the operational cost, like electricity.}\footnote{We would like also to consider the cost of obtaining the storage device in first place, assuming the farmer did not have free space -- the reason is to explain that the ``attacker'' may use their funds to buy storage. This should be a negligible cost in the long run, and we do not discuss it here. This is also the case for running $\mask_{\seed}$ in the (honest) protocol.} A single piece $d_i$ gives some amount $c$ (e.g. $c=1$) of lottery tickets per challenge $\mathcal{C}_t$.
 
-Then, we measure the cost of running $\mask_{\seed}$ with parameter $k$ once. Running $\mask_{\seed}$ once enables to produce a single masked piece $d_i$.\footnote{Here we assume that the dishonest farmer has the entire file $F$ unmasked, hence she can draw any piece $d_i$, and assign it no extra cost (as this can be amortised among all of the attacker IDs).} This gives the farmer $c$ lottery tickets per challenge $\mathcal{C}_t$ as well. Since we have control over $k$, we can make sure that the latter cost is significantly higher that the former, thus making protocol deviation an irrational strategy.
+Then, we measure the cost of running $\mask_{\seed}$ with parameter $k$ once. Running $\mask_{\seed}$ once enables to produce a single masked piece $d_i$.\footnote{Here we assume that the dishonest farmer has the entire file $F$ unmasked, hence she can draw any piece $d_i$, and assign it no extra cost (as this can be amortised among all of the attacker IDs).} This gives the farmer $c$ lottery tickets per challenge $\mathcal{C}_t$ as well. Since we have control over $k$, we can make sure that the latter cost is significantly higher than the former, thus making protocol deviation an irrational strategy.
 
 
 \section{Initial Experimental Results}
 
-In the current prototype implementation, we have achieved the following performance results for the KZG algorithms: 
+In this section, we present the initial Rust implementation results of our proposed construction. 
+Our evaluations were obtained on common consumer hardware - Apple M1Pro 2021, 10 cores (8 performance and 2 efficiency) and 16 GB memory.
+We evaluate the performance of each component as well as the entire construction.  Our early evaluation results are encouraging, and we believe that there is still room for further optimization. 
+
+For the KZG polynomial commitment, we currently derived public parameters locally for testing purposes only. We chose $\ell = 2^{15}$ so that the size of $d_i$ is 1MiB. 
+The following four operations are required to implement KZG polynomial commitment. The evaluation results are provided below.
 \begin{itemize}
-    \item inverse FFT to create polynomial for KZG ($2^{15}$ elements) $\approx 1.6 ms$
-    \item KZG commitment ($2^{15}$ elements) $\approx 40 ms$
-    \item KZG witness creation (for a single element of $2^{15}$ elements) $\approx40 ms$
-    \item KZG witness verification $\approx 865 \mu s$
+    \item Converting $d_i$ into $f_i(x)$ through inverse FFT $\approx 1.6 ms$
+    \item Computing the commitment $A_i$ of $f_i(x)$ $\approx 40 ms$
+    \item Creating a single KZG proof for $f_i(x)$ $\approx 40 ms$
+    \item Verifying a single KZG proof $\approx 865 \mu s$
 \end{itemize}
-For the Chia-based PoS $k = 17$ and $q = 7$:
+
+We implemented the function-inverting component by using Chia PoS tables with $k = 17$, $L = 2^{16}$, and $q = 7$.\footnote{We will try other parameters (such as $k = 22$ and $q = 10$) as our next steps.} We converted their code from C++ to Rust and did various optimizations.  We have the following evaluation results
 \begin{itemize}
-    \item Generation of $q$ tables $\approx 360 ms$
-    \item Masking $2^{15}$ points of the record polynomial $\approx 4 ms$
-    \item Constructing a proof-of-space $\approx 450 ns$
-    \item Verifying a proof-of-space $\approx 25 \mu s$
-\end{itemize}    
-For the complete protocol the numbers are the following:
+    \item Generating $7$ function tables $\approx 300 ms$
+    \item Masking $2^{15}$ points of a polynomial $\approx 4 ms$
+    \item Constructing a Chia proof-of-space $\approx 450 ns$
+    \item Verifying a Chia proof-of-space $\approx 25 \mu s$
+\end{itemize}   
+Our implementation achieved orders-of-magnitude improvement over Chia's C++ implementation. We will explain the reasons for this improvement in a more elaborated version of this work.
+
+Finally, we report the evaluation results of the entire construction for leader election (without the longest-chain consensus).
 \begin{itemize}
-    \item Plotting a single sector of 1300 records $\approx 680 s$
-    \item Auditing a single storage coin in a single sector $\approx 4.5 \mu s$
-    \item Recovering of a record from the plot $\approx 980 ms$
-    \item Proving a winning ticket $\approx 1 s$
+    \item Plotting phase with $m = 1300$ $\approx 75 s$
+    \item Scanning a single storage coin $\approx 4.5 \mu s$
+    \item Recovering a polynomial $\approx 880 ms$
+    \item Proving a winning ticket $\approx 900 ms$
 \end{itemize}
-Plotting has also shown a consistent usage of 3 GB of memory. Generation of PoS tables is expectedly heavily memory bound $\approx24\%$ and $\approx 22,0\%$ core bound.                Recovering of a record from the plot consists of reading from disk all the storage coins that contain chunks of it, re-generating the corresponding PoS table, XOR-unmasking and erasure code recovery. Proving a winning ticket consists of recovering the parent record, computing a PoS proof and computing a KZG witness.
-The numbers provided were obtained on common consumer hardware - Apple M1Pro 2021, 10 cores (8 performance and 2 efficiency) and 16 GB memory. There is still potential for optimizations in both plotting and proving phases. 
+The plotting phase shows consistent usage of 3 GB of memory, suggesting that we can further increase $k$ and $q$.
+Scanning a storage coin is a simple operation, only involving reading the coin from disk.
+Recovering a polynomial is a complicated process, involving reading from disk all the storage coins that contain chunks of it, re-generating the Chia function tables,  XOR-unmasking, and erasure code recovery.
+Proving a winning ticket consists of three steps: recovering the ``winning'' polynomial, computing a Chia proof-of-space, and creating a KZG proof. The first step is the bottleneck, and the other two steps are quite efficient.
 
 
 \begin{comment}
@@ -523,7 +530,88 @@ Comments (for ourselves as we discuss this):
 
 
 \section*{Acknowledgement}
-The authors would like to thank Shashank Agrawal and Joachim Neu for fruitful discussions throughout this project. CF would like to thank Khadijeh Bagheri, Hoang Dau, and Hassan Khodaiemehr for their useful comments on a draft version of this work.
+The authors would like to thank Nazar Mokrynskyi for his impressive Rust implementation of the proposed construction. The authors would also like to thank
+Shashank Agrawal and Joachim Neu for fruitful discussions throughout this project. CF would like to thank Khadijeh Bagheri, Hoang Dau, and Hassan Khodaiemehr for their useful comments on a draft version of this work.
+
+\begin{thebibliography}{9}
+
+\bibitem{beyond_hellman}
+Abusalah H., Alwen J., Cohen B., Khilko D., Pietrzak K., and Reyzin L.
+\emph{Beyond Hellman’s Time-Memory Trade-Offs with Applications to Proofs of Space}
+Advances in Cryptology -- ASIACRYPT 2017, pp. 357–379.
+
+\bibitem{pose}
+Ateniese, G., Bonacina, I., Faonio, A., and Galesi, N.
+\emph{Proofs of Space: When Space Is of the Essence}
+SCN 2014: Security and Cryptography for Networks, pp. 538–557.
+
+\bibitem{blockchain_resources}
+Azouvi S., Cachin C., V. Le Duc, Vukolic M., and Zanolini L.
+\emph{Modeling Resources in Permissionless Longest-chain Total-order Broadcast}
+arXiv:2211.12050 [cs.CR],
+https://doi.org/10.48550/arXiv.2211.12050.
+
+\bibitem{spacemesh}
+Bentov I., Loss J., Moran T., and Shani B.
+\emph{The Spacemesh Protocol: Tortoise and Hare Consensus… In… Space}
+https://spacemesh.io/blog/spacemesh-protocol-v1.0/,
+https://drive.google.com/file/d/18I9GPebWqgpvusI1kMnAB9nayBbL-1qN/view.
+
+\bibitem{chia}
+Cohen B., and Pietrzak K.
+\emph{The Chia Network Blockchain}
+https://docs.chia.net/green-paper-abstract/,
+https://docs.chia.net/assets/files/Precursor-ChiaGreenPaper-82cb50060c575f3f71444a4b7430fb9d.pdf.
+
+\bibitem{proof_of_space}
+Stefan Dziembowski, Sebastian Faust, Vladimir Kolmogorov, and Krzysztof Pietrzak
+\emph{Proofs of Space}
+Advances in Cryptology -- CRYPTO 2015, pp. 585–605.
+
+\bibitem{proof_of_replication_BFisch}
+Fisch B. \emph{PoReps: Proofs of Space on Useful Data} Cryptology ePrint Archive, Paper 2018/678, 2018. [Online]. Available: https://eprint.iacr.org/2018/678.
+
+\bibitem{KZG_paper}
+Kate A., Zaverucha G., and Goldberg I.  \emph{Polynomial commitments} Technical report, 2010. CACR 2010-10, Centre for Applied Cryptographic Research, University of Waterloo.
+
+\bibitem{blockchain_capacity}
+Kiffer L., Neu J., Sridhar S., Zohar A., Tse D.
+\emph{Security of Blockchains at Capacity}
+Cryptology ePrint Archive, Paper 2023/381,
+https://eprint.iacr.org/2023/381.
+
+\bibitem{erasure}
+Li J., and Li  B. \emph{Erasure coding for cloud storage systems: A survey} in Tsinghua Science and Technology, vol. 18, no. 3, pp. 259-272, June 2013.
+
+\bibitem{post}
+Moran T., and Orlov I.
+\emph{Simple Proofs of Space-Time and Rational Proofs of Storage}
+Advances in Cryptology -- CRYPTO 2019, pp. 381–409.
+
+\bibitem{spacemint}
+Park S., Kwon A., Fuchsbauer G., Ga\u{z}i P., Alwen J., and Pietrzak K.
+\emph{SpaceMint: A Cryptocurrency Based on Proofs of Space}
+Cryptology ePrint Archive, Paper 2015/528,
+https://eprint.iacr.org/2015/528.
+
+\bibitem{filecoin}
+Protocol Labs
+\emph{Filecoin: A Decentralized Storage Network}
+https://filecoin.io/filecoin.pdf.
+
+\bibitem{subspacev1}
+Wagstaff J.
+\emph{Subspace: A Solution to the Farmer’s Dilemma}
+https://subspace.network/news/subspace-network-whitepaper,
+%\text{https://assets.website-files.com/61526a2af87a54e565b0ae92/617759c00edd0e3bd279aa29_Subspace_%20A%20solution%20to%20the%20farmer%27s%20dilemma.pdf}.
+
+%\bibitem{rainbow_table}
+
+
+
+\end{thebibliography}
+
+
 \begin{figure*}
 \definecolor{wwccqq}{rgb}{0.4,0.8,0.} %blockchains color
 \definecolor{qqqqcc}{rgb}{0.,0.,0.8} %MASK
@@ -857,54 +945,7 @@ The authors would like to thank Shashank Agrawal and Joachim Neu for fruitful di
 \end{addmargin}
 \end{figure*}
 
-\begin{thebibliography}{9}
 
-\bibitem{beyond_hellman}
-Abusalah H., Alwen J., Cohen B., Khilko D., Pietrzak K., and Reyzin L.
-\emph{Beyond Hellman’s Time-Memory Trade-Offs with Applications to Proofs of Space}
-Advances in Cryptology – ASIACRYPT 2017.
-
-\bibitem{blockchain_resources}
-Azouvi S., Cachin C., V. Le Duc, Vukolic M., and Zanolini L.
-\emph{Modeling Resources in Permissionless Longest-chain Total-order Broadcast}
-arXiv:2211.12050 [cs.CR],
-https://doi.org/10.48550/arXiv.2211.12050.
-
-\bibitem{spacemesh}
-Bentov I., Loss J., Moran T., and Shani B.
-\emph{The Spacemesh Protocol: Tortoise and Hare Consensus… In… Space}
-https://spacemesh.io/blog/spacemesh-protocol-v1.0/,
-https://drive.google.com/file/d/18I9GPebWqgpvusI1kMnAB9nayBbL-1qN/view.
-
-\bibitem{chia}
-Cohen B., and Pietrzak K.
-\emph{The Chia Network Blockchain}
-https://docs.chia.net/green-paper-abstract/,
-https://docs.chia.net/assets/files/Precursor-ChiaGreenPaper-82cb50060c575f3f71444a4b7430fb9d.pdf.
-
-\bibitem{blockchain_capacity}
-Kiffer L., Neu J., Sridhar S., Zohar A., Tse D.
-\emph{Security of Blockchains at Capacity}
-Cryptology ePrint Archive, Paper 2023/381,
-https://eprint.iacr.org/2023/381.
-
-\bibitem{spacemint}
-Park S., Kwon A., Fuchsbauer G., Ga\u{z}i P., Alwen J., and Pietrzak K.
-\emph{SpaceMint: A Cryptocurrency Based on Proofs of Space}
-Cryptology ePrint Archive, Paper 2015/528,
-https://eprint.iacr.org/2015/528.
-
-\bibitem{proof_of_replication_BFisch}
-Fisch B. \emph{PoReps: Proofs of Space on Useful Data} Cryptology ePrint Archive, Paper 2018/678, 2018. [Online]. Available: https://eprint.iacr.org/2018/678.
-
-\bibitem{KZG_paper}
-Kate A., Zaverucha G., and Goldberg I.  \emph{Polynomial commitments} Technical report, 2010. CACR 2010-10, Centre for Applied Cryptographic Research, University of Waterloo.
-\bibitem{erasure}
-Li J. and Li  B. \emph{Erasure coding for cloud storage systems: A survey} in Tsinghua Science and Technology, vol. 18, no. 3, pp. 259-272, June 2013.
-
-
-
-\end{thebibliography}
 
 \end{document}
 
