@@ -426,21 +426,21 @@ The following four operations are required to implement KZG polynomial commitmen
     \item Verifying a single KZG proof $\approx 865 \mu s$
 \end{itemize}
 
-We implemented the function-inverting component by using Chia PoS tables with $k = 17$, $L = 2^{16}$, and $q = 7$.\footnote{We will try other parameters (such as $k = 22$ and $q = 10$) as our next steps.} We converted their code from C++ to Rust and did various optimizations.  We have the following evaluation results
+We implemented the function-inverting component by using Chia PoS tables with $k = 20$, $L = 2^{16}$, and $q = 7$.\footnote{We will try other parameters (such as $k = 22$ and $q = 10$) as our next steps.} We converted their code from C++ to Rust and did various optimizations.  We have the following evaluation results
 \begin{itemize}
-    \item Generating $7$ function tables $\approx 300 ms$
-    \item Masking $2^{15}$ points of a polynomial $\approx 4 ms$
-    \item Constructing a Chia proof-of-space $\approx 450 ns$
+    \item Generating $7$ function tables $\approx 325 ms$
+    \item Masking $2^{15}$ points of a polynomial $\approx 7.3 ms$
+    \item Constructing a Chia proof-of-space $\approx 186 ns$
     \item Verifying a Chia proof-of-space $\approx 25 \mu s$
 \end{itemize}   
 Our implementation achieved orders-of-magnitude improvement over Chia's C++ implementation. We will explain the reasons for this improvement in a more elaborated version of this work.
 
 Finally, we report the evaluation results of the entire construction for leader election (without the longest-chain consensus).
 \begin{itemize}
-    \item Plotting phase with $m = 1300$ $\approx 75 s$
-    \item Scanning a single storage coin $\approx 4.5 \mu s$
+    \item Plotting phase with $m = 1000$ $\approx 300 s$
+    \item Scanning a single storage coin $\approx 580 \mu s$
     \item Recovering a polynomial $\approx 880 ms$
-    \item Proving a winning ticket $\approx 900 ms$
+    \item Proving a winning ticket $\approx 970 ms$
 \end{itemize}
 The plotting phase shows consistent usage of 3 GB of memory, suggesting that we can further increase $k$ and $q$.
 Scanning a storage coin is a simple operation, only involving reading the coin from disk.
